@@ -22,3 +22,36 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# === BLINDAGEM SASI / Comando UTI Alpha ============================
+# Adicionado 30-Abr-2026 pra impedir commit acidental de secrets e
+# projetos não-relacionados que vivem no mesmo diretório raiz.
+
+# Secrets (NUNCA commitar — apaga se não precisar mais)
+.env
+.env.local
+.env.*.local
+temp_keys.md
+*Chaves*Senhas*
+*Chaves,*
+*APIKEY*
+*APIKEYs*
+Links e APIKEYs.docx
+Chaves, Senhas e Acesso a Sistemas (Ficheiro Antigravity).docx
+
+# Outros projetos top-level que NÃO fazem parte do repo comando-uti
+/genkitggoggins/
+/y/
+/Antigravity/
+/backend/
+/base-de-dados-ggoggins/
+/codebase/
+/dataconnect/
+
+# Stray junk (typos do shell)
+/]ty
+/{
+
+# Artifacts pesados
+*.vsix
+# === FIM BLINDAGEM =================================================
