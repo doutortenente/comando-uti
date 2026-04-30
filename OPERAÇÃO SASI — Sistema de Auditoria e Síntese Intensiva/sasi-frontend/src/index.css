@@ -2,11 +2,126 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
-body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+/* ============================================================================
+   SASI — Theme tokens (3 modes: dark, clinical, light)
+   CSS vars are R G B triples so Tailwind can do `/<alpha>`.
+   ============================================================================ */
+:root,
+body.theme-dark {
+  --app-bg: 15 23 42;          /* slate-950 */
+  --app-card: 30 41 59;        /* slate-800 */
+  --app-tertiary: 51 65 85;    /* slate-700 */
+  --app-border: 71 85 105;     /* slate-600 */
+  --app-text: 248 250 252;     /* slate-50 */
+  --app-text-2: 203 213 225;   /* slate-300 */
+  --app-text-muted: 148 163 184; /* slate-400 */
+  --app-accent: 220 38 38;     /* red-600 */
+  --app-accent-hover: 185 28 28; /* red-700 */
+  --app-success: 16 185 129;   /* emerald-500 */
+  --app-warning: 245 158 11;   /* amber-500 */
+  --app-danger: 239 68 68;     /* red-500 */
+}
 
-/* Scrollbar mais escuro pra combinar com o tema */
+body.theme-clinical {
+  --app-bg: 255 255 255;
+  --app-card: 248 250 252;     /* slate-50 */
+  --app-tertiary: 226 232 240; /* slate-200 */
+  --app-border: 203 213 225;   /* slate-300 */
+  --app-text: 15 23 42;        /* slate-950 */
+  --app-text-2: 71 85 105;     /* slate-600 */
+  --app-text-muted: 100 116 139; /* slate-500 */
+  --app-accent: 37 99 235;     /* blue-600 — clinical accent */
+  --app-accent-hover: 29 78 216; /* blue-700 */
+}
+
+body.theme-light {
+  --app-bg: 248 250 252;       /* slate-50 */
+  --app-card: 255 255 255;
+  --app-tertiary: 226 232 240; /* slate-200 */
+  --app-border: 203 213 225;   /* slate-300 */
+  --app-text: 15 23 42;        /* slate-950 */
+  --app-text-2: 71 85 105;     /* slate-600 */
+  --app-text-muted: 100 116 139; /* slate-500 */
+  --app-accent: 220 38 38;     /* red-600 — keep red */
+  --app-accent-hover: 185 28 28;
+}
+
+html, body, #root { height: 100%; }
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: rgb(var(--app-bg));
+  color: rgb(var(--app-text-2));
+  overflow-x: hidden;
+}
+
+/* ============================================================================
+   Animations
+   ============================================================================ */
+@keyframes sasi-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sasi-slide-in {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes sasi-critical-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+@keyframes sasi-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sasi-fade-in { animation: sasi-fade-in 0.3s ease-out; }
+.sasi-slide-in { animation: sasi-slide-in 0.4s ease-out; }
+.sasi-critical-pulse { animation: sasi-critical-pulse 2s ease-in-out infinite; }
+.sasi-spin { animation: sasi-spin 0.6s linear infinite; }
+
+/* ============================================================================
+   Scrollbar
+   ============================================================================ */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #0f172a; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+::-webkit-scrollbar-track { background: rgb(var(--app-card)); }
+::-webkit-scrollbar-thumb { background: rgb(var(--app-border)); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--app-text-muted)); }
+
+/* ============================================================================
+   Gravidade badges (mantém intensidade clínica em todos os temas)
+   ============================================================================ */
+.gravidade-estavel  { background:#064e3b; color:#6ee7b7; border:1px solid #10b981; }
+.gravidade-moderado { background:#78350f; color:#fcd34d; border:1px solid #f59e0b; }
+.gravidade-grave    { background:#7c2d12; color:#fdba74; border:1px solid #f97316; }
+.gravidade-critico  { background:#7f1d1d; color:#fca5a5; border:1px solid #dc2626; }
+.gravidade-obito    { background:#1e293b; color:#94a3b8; border:1px solid #475569; }
+
+body.theme-clinical .gravidade-estavel,
+body.theme-light    .gravidade-estavel  { background:#d1fae5; color:#065f46; border-color:#10b981; }
+body.theme-clinical .gravidade-moderado,
+body.theme-light    .gravidade-moderado { background:#fef3c7; color:#92400e; border-color:#f59e0b; }
+body.theme-clinical .gravidade-grave,
+body.theme-light    .gravidade-grave    { background:#fed7aa; color:#9a3412; border-color:#f97316; }
+body.theme-clinical .gravidade-critico,
+body.theme-light    .gravidade-critico  { background:#fecaca; color:#991b1b; border-color:#dc2626; }
+
+/* ============================================================================
+   SOFA color thresholds
+   ============================================================================ */
+.sofa-low      { color: #34d399; }  /* emerald-400 */
+.sofa-medium   { color: #fcd34d; }  /* amber-300 */
+.sofa-high     { color: #fb923c; }  /* orange-400 */
+.sofa-critical { color: #f87171; }  /* red-400 */
+
+body.theme-clinical .sofa-low, body.theme-light .sofa-low           { color: #059669; }
+body.theme-clinical .sofa-medium, body.theme-light .sofa-medium     { color: #d97706; }
+body.theme-clinical .sofa-high, body.theme-light .sofa-high         { color: #ea580c; }
+body.theme-clinical .sofa-critical, body.theme-light .sofa-critical { color: #dc2626; }
+
+/* ============================================================================
+   Dose calculator pills
+   ============================================================================ */
+.dose-ok      { background:#064e3b; color:#6ee7b7; }
+.dose-warning { background:#7f1d1d; color:#fca5a5; }
+
+body.theme-clinical .dose-ok, body.theme-light .dose-ok           { background:#d1fae5; color:#065f46; }
+body.theme-clinical .dose-warning, body.theme-light .dose-warning { background:#fecaca; color:#991b1b; }

@@ -170,6 +170,37 @@ Skill complementar: `anthropic-skills:sasi-ingest-export` (extrai dados de fotos
 | 30-Abr | env vars `VITE_*` configuradas no Netlify | Bundle estava sendo buildado sem creds → tela preta |
 | 30-Abr | **Fase A faxina:** removido `G_Goggins_pós_Claude_*/` (backup duplicado), `MANIFESTO_SASI_26Abr2026.md` movido pra `docs/archive/`, `importFromFirebase` removido como dead code, `.env.example` corrigido | Limpeza pós-review |
 | 30-Abr | **Fase D governança:** PR template adicionado em `.github/`, regra #1 de sync formalizada | Disciplina multi-Claude |
+| 30-Abr | **Claude Design bundle implementado:** 3 temas (dark/clinical/light), 3 view modes (Plantão/Round/Editor), `lib/drugs.ts` com calculadora de DVA/sedação, `lib/theme.tsx` com `UIProvider`, novos componentes (`ThemeToggle`, `ViewSwitcher`, `MiniChart`, `InfusionEditor`, `CriticalAlerts`, `SplitView`, `TableView`), `PatientModal` reescrito com 3 abas, `LeitoCard` re-skinado com tokens `app-*`. Edit form ficou read-only por enquanto (escrita continua via edge function `/ocr-ingest` com audit log). | Implementação do bundle de design |
+
+---
+
+## 🎨 Design system (30-Abr-2026)
+
+### 3 temas (CSS vars como triplas RGB pra alpha do Tailwind)
+- `dark` (default) — fundo `#0f172a`
+- `clinical` — fundo `#fef3c7` (amber claro, alta luminância da UTI)
+- `light` — fundo `#ffffff`
+
+Aplicação via `body.theme-{nome}` em `src/index.css`. Toggle: `<ThemeToggle />` cicla os 3.
+
+### 3 view modes (persistidos em `localStorage`)
+- `plantao` (default) — grid de `LeitoCard` (Cards)
+- `round` — `SplitView` (lista lateral 320px + preview 1fr)
+- `editor` — `TableView` (tabela densa estilo Excel)
+
+Switcher: `<ViewSwitcher />`. Estado global em `lib/theme.tsx → UIProvider`.
+
+### Tokens Tailwind (mapeiam pras CSS vars)
+`bg-app`, `bg-app-card`, `bg-app-tertiary`, `border-app-border`, `text-app-text`, `text-app-text-2`, `text-app-text-muted`, `bg-app-accent`, `bg-app-accent-hover`. **Sempre usar esses tokens, nunca `bg-slate-*` hardcoded** — quebra os 3 temas.
+
+### Calculadora de drogas (`lib/drugs.ts`)
+- `DVA_DICT` — Noradrenalina, Adrenalina, Dobutamina, Vasopressina (com diluições padrão da UTI)
+- `SEDACAO_DICT` — Fentanil, Midazolam, Propofol
+- `calculateDose(drug, diluicao, vazao, peso, isDVA)` → `DoseResult` com flag `isOk` (faixa terapêutica)
+- `sofaColorClass(sofa)` → `sofa-low|medium|high|critical` (themed)
+
+### Edge-function-first (LGPD art. 46)
+Aba **Editar** do `PatientModal` é **read-only**. Toda escrita de evolução vai via skill `sasi-ingest-export` ou edge function `/ocr-ingest` com audit log compulsório. Pendências aceitam toggle inline (RLS protegido por `auth.uid()`).
 
 ---
 
@@ -211,4 +242,4 @@ Symlinkadas pro Claude Code via `.claude/skills/`.
 
 ---
 
-**Última atualização:** 30-Abr-2026 (Fase A + D) · Stay hard. 🦅
+**Última atualização:** 30-Abr-2026 (Fase A + D + Design bundle) · Stay hard. 🦅

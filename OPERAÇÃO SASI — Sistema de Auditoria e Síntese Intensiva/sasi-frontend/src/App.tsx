@@ -1,9 +1,11 @@
 // ============================================================================
 // SASI — Comando UTI Alpha · App.tsx (Supabase-native, zero Firebase)
+// Wrapper com UIProvider pros 3 temas (dark/clinical/light) e 3 view modes.
 // ============================================================================
 import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabaseClient';
+import { UIProvider } from './lib/theme';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
@@ -27,15 +29,17 @@ export default function App() {
     };
   }, []);
 
-  if (bootLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-300">
-        <div className="text-sm">Inicializando SASI…</div>
-      </div>
-    );
-  }
-
-  if (!session) return <Login />;
-
-  return <Dashboard session={session} />;
+  return (
+    <UIProvider>
+      {bootLoading ? (
+        <div className="min-h-screen flex items-center justify-center bg-app text-app-text-muted">
+          <div className="text-sm">Inicializando SASI…</div>
+        </div>
+      ) : !session ? (
+        <Login />
+      ) : (
+        <Dashboard session={session} />
+      )}
+    </UIProvider>
+  );
 }
