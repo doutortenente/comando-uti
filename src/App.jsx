@@ -1,31 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { 
-  Printer, Copy, Activity, Brain, Wind, HeartPulse, Utensils, Droplets, TestTube, Bug, 
-  AlertCircle, ListChecks, ShieldAlert, Pill, Plus, Trash2, MessageSquareText, AlertTriangle, 
-  ChevronDown, ChevronUp, ClipboardList, Syringe, Microscope, Clipboard, Beaker, Users, 
-  UserPlus, ArrowLeft, Settings, Moon, Sun, Wand2, CheckCircle2, Calculator, Flame, 
+import { subscribeToPatients, savePatientToSupabase, deletePatientFromSupabase } from './lib/supabaseAdapter';
+import {
+  Printer, Copy, Activity, Brain, Wind, HeartPulse, Utensils, Droplets, TestTube, Bug,
+  AlertCircle, ListChecks, ShieldAlert, Pill, Plus, Trash2, MessageSquareText, AlertTriangle,
+  ChevronDown, ChevronUp, ClipboardList, Syringe, Microscope, Clipboard, Beaker, Users,
+  UserPlus, ArrowLeft, Settings, Moon, Sun, Wand2, CheckCircle2, Calculator, Flame,
   Cloud, CloudOff, Download
 } from 'lucide-react';
 
 // ==========================================
-// CONFIGURAÇÃO FIREBASE (NUVEM TÁTICA)
+// CONFIGURAÇÃO SUPABASE (NUVEM TÁTICA)
 // ==========================================
-const firebaseConfig = {
-  apiKey: "AIzaSyC7xfWhZ7Gw4UeByeMOjiqI-QiYeIIRjc8",
-  authDomain: "base-de-dados-ggoggins.firebaseapp.com",
-  projectId: "base-de-dados-ggoggins",
-  storageBucket: "base-de-dados-ggoggins.firebasestorage.app",
-  messagingSenderId: "113111933347",
-  appId: "1:113111933347:web:dc58ac581c016406913a16",
-  measurementId: "G-JZ7EL5QT7H"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'comando-uti-alpha';
+// A instância do Supabase é importada de src/lib/supabase.js
 
 // ==========================================
 // DICIONÁRIOS E CONSTANTES CLÍNICAS
@@ -58,7 +44,7 @@ const ESCALAS_NEURO_DICT = {
 // ==========================================
 // COMPONENTES AUXILIARES UI (COM A11Y)
 // ==========================================
-const InlineInput = ({ val, path, ph, w = "w-12", updateField, type="text", ariaLabel }) => (
+const InlineInput = ({ val, path, ph, w = "w-12", updateField, type = "text", ariaLabel }) => (
   <input
     type={type}
     inputMode={type === 'number' ? 'numeric' : 'text'}
@@ -72,13 +58,13 @@ const InlineInput = ({ val, path, ph, w = "w-12", updateField, type="text", aria
 
 const NotasField = ({ notasValue, showNotas, onToggle, onUpdate, sistemaNome }) => (
   <div className="mt-3 no-print">
-    <button 
+    <button
       onClick={onToggle}
       aria-expanded={showNotas || !!notasValue}
       aria-label={`${showNotas || notasValue ? 'Ocultar' : 'Adicionar'} Notas para ${sistemaNome}`}
       className={`flex items-center gap-1 text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 rounded px-1 ${showNotas || notasValue ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-blue-500'}`}
     >
-      <MessageSquareText size={14} aria-hidden="true" /> 
+      <MessageSquareText size={14} aria-hidden="true" />
       {showNotas || notasValue ? 'Ocultar Notas' : 'Adicionar Notas'}
     </button>
     {(showNotas || notasValue) && (
@@ -103,22 +89,22 @@ const Accordion = ({ title, icon: Icon, count, isOpen, onToggle, colorClass, chi
 
   return (
     <div className="flex flex-col gap-2 mt-2 mb-2">
-      <button 
-        onClick={onToggle} 
+      <button
+        onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={`accordion-content-${title.replace(/\s+/g, '-')}`}
         className={`w-full flex items-center justify-between ${colors.btnBg} p-3 rounded-xl border ${colors.btnBorder} shadow-sm hover:shadow-md transition-all group focus:outline-none focus:ring-2 ${colors.ring} no-print dark-card`}
       >
         <div className="flex items-center gap-3">
-          <div className={`${colors.iconBg} ${colors.iconText} p-1.5 rounded-lg group-hover:scale-110 transition-transform dark-icon`}><Icon size={16} aria-hidden="true"/></div>
+          <div className={`${colors.iconBg} ${colors.iconText} p-1.5 rounded-lg group-hover:scale-110 transition-transform dark-icon`}><Icon size={16} aria-hidden="true" /></div>
           <span className={`font-bold ${colors.text} text-sm uppercase tracking-wide dark-text-title`}>{title}</span>
           {count > 0 && <span className={`${colors.badgeBg} text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm`} aria-label={`${count} itens ativos`}>{count}</span>}
         </div>
         <div className={`${colors.hoverBg} p-1 rounded-md ${colors.chevron} group-hover:text-current transition-colors dark-hover`}>
-          {isOpen ? <ChevronUp size={16} aria-hidden="true"/> : <ChevronDown size={16} aria-hidden="true"/>}
+          {isOpen ? <ChevronUp size={16} aria-hidden="true" /> : <ChevronDown size={16} aria-hidden="true" />}
         </div>
       </button>
-      <div 
+      <div
         id={`accordion-content-${title.replace(/\s+/g, '-')}`}
         className={`${isOpen ? 'block animate-in fade-in slide-in-from-top-2 duration-300' : 'hidden'} print-block ml-2 sm:ml-4 pl-2 sm:pl-4 border-l-2 ${colors.btnBorder} space-y-3`}
       >
@@ -151,7 +137,7 @@ const getInitialState = (uti = 'UTI 2', id = null) => ({
 const getClinicalIntelligence = (p) => {
   let sofa = 0;
   let sofaDet = [];
-  
+
   // 1. Resp
   let fio2 = parseFloat(p.resp.vmFio2) || parseFloat(p.resp.fio2O2) || 21;
   let pao2 = parseFloat(p.resp.pao2);
@@ -186,7 +172,7 @@ const getClinicalIntelligence = (p) => {
   let pam = parseFloat(p.hemo.pam1);
   let hasDVA = p.dvas && p.dvas.length > 0;
   if (hasDVA) {
-    let isHighDose = p.dvas.some(d => d.droga === 'Noradrenalina' && parseFloat(d.vazao) > 10); 
+    let isHighDose = p.dvas.some(d => d.droga === 'Noradrenalina' && parseFloat(d.vazao) > 10);
     if (isHighDose) { sofa += 4; sofaDet.push('Cardio: 4 (>0.1 DVA)'); }
     else { sofa += 3; sofaDet.push('Cardio: 3 (DVA)'); }
   } else if (pam && pam < 70) {
@@ -229,8 +215,9 @@ const getClinicalIntelligence = (p) => {
 }
 
 const PRELOADED_PATIENTS = [
-  { ...getInitialState('UTI 2', 'p01'), leito: '01', nome: 'EUGENIA', hd: 'PO tardio ablação FA | IC Aguda | Derrame Pleural | Choque séptico foco Urinário', adm: '12/03/26', peso: '77', altura: '1.60', alergias: 'Nega', gravidade: 'Instável', 
-    neuro: { ...getInitialState().neuro, escalas: [{nome: 'ECG (Glasgow)', valor: '15'}], pupilas: 'PIRF', analgesia: '', camIcu: 'Negativo', notas: 'vigil, calma e colaborativa' },
+  {
+    ...getInitialState('UTI 2', 'p01'), leito: '01', nome: 'EUGENIA', hd: 'PO tardio ablação FA | IC Aguda | Derrame Pleural | Choque séptico foco Urinário', adm: '12/03/26', peso: '77', altura: '1.60', alergias: 'Nega', gravidade: 'Instável',
+    neuro: { ...getInitialState().neuro, escalas: [{ nome: 'ECG (Glasgow)', valor: '15' }], pupilas: 'PIRF', analgesia: '', camIcu: 'Negativo', notas: 'vigil, calma e colaborativa' },
     resp: { ...getInitialState().resp, suporte: 'Ar ambiente', fr1: '', fr2: '', spo2: '', ausculta: 'MV + bil com estretores em bases' },
     hemo: { ...getInitialState().hemo, pam1: '60', ausculta: 'Ritmo cardíaco irregular, 2T, BNF', pele: 'TEC < 3s | Pulsos presentes simétricos, panturrilhas livres sem edemas' },
     dvas: [{ droga: 'Noradrenalina', diluicao: 0, vazao: '15' }],
@@ -259,7 +246,7 @@ const calcDoseInfusao = (infusao, dictMap, pesoAtual) => {
     if (!pesoAtual) return { error: 'Insira o Peso' };
     dose = (parseFloat(infusao.vazao) * dil.factor) / parseFloat(pesoAtual);
   }
-  
+
   const isOk = dose >= dict.min && dose <= dict.max;
   return { value: dose.toFixed(2), unit: dil.type, min: dict.min, max: dict.max, isOk };
 };
@@ -285,7 +272,7 @@ const generateSinglePatientText = (d) => {
   let dietaText = d.tgi.viaDieta || '____';
   if (d.tgi.viaDieta === 'Outra' && d.tgi.dietaOutra) dietaText = d.tgi.dietaOutra;
   if (d.tgi.viaDieta && d.tgi.viaDieta !== 'Via oral' && d.tgi.viaDieta !== 'Jejum') dietaText += ` (Vazão: ${d.tgi.vazaoDieta || '___'} ml/h)`;
-  
+
   let evacuacoesText = '____';
   if (d.tgi.evacuou === 'Sim') evacuacoesText = `Sim (${d.tgi.evacuacoesNum || '___'} vezes | Aspecto/Vol: ${d.tgi.evacuacoesAspecto || '___'})`;
   else if (d.tgi.evacuou === 'Não') evacuacoesText = `Não (Última em: ${d.tgi.evacuacoesDataUltima || '___'})`;
@@ -381,7 +368,7 @@ ${pendenciasText}
 export default function App() {
   const [patients, setPatients] = useState([]);
   const [activePatientId, setActivePatientId] = useState(null);
-  
+
   const [authUser, setAuthUser] = useState(null);
   const [cloudStatus, setCloudStatus] = useState('connecting');
 
@@ -389,7 +376,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [userApiKey, setUserApiKey] = useState('');
-  
+
   const [importText, setImportText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importStatus, setImportStatus] = useState('');
@@ -401,61 +388,41 @@ export default function App() {
   const showConfirm = (message, onConfirm) => setDialog({ isOpen: true, message, type: 'confirm', onConfirm });
   const closeDialog = () => setDialog({ isOpen: false, message: '', type: 'alert', onConfirm: null });
 
-  // AUTENTICAÇÃO TÁTICA (REQUISITO PARA BASE DE DADOS SEGURA)
+  // AUTENTICAÇÃO (MOCK PARA SUPABASE ANON)
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Falha ao autenticar na Nuvem:", err);
-        setCloudStatus('offline');
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setAuthUser);
-    return () => unsubscribe();
+    // Para simplificar no desenvolvimento local, assumimos autenticação anonima OK.
+    setAuthUser({ uid: 'anon-user' });
   }, []);
 
-  // SINCRONIZAÇÃO EM TEMPO REAL E INJEÇÃO DA SEED BÁSICA
+  // SINCRONIZAÇÃO SUPABASE E INJEÇÃO DA SEED BÁSICA
   useEffect(() => {
     if (!authUser) return;
     setCloudStatus('syncing');
-    
-    // REGRA 1: PATH ESTRITO CUMPRIDO (/artifacts/{appId}/users/{userId}/{collectionName})
-    const ptsRef = collection(db, 'artifacts', appId, 'users', authUser.uid, 'patients');
-    
-    // REGRA 2: SEM QUERIES COMPLEXAS CUMPRIDO
-    const unsub = onSnapshot(ptsRef, (snapshot) => {
-      const loadedPts = [];
-      snapshot.forEach(doc => loadedPts.push(doc.data()));
-      
+
+    const unsub = subscribeToPatients((loadedPts) => {
       if (loadedPts.length === 0 && !window.__db_seeded_uti) {
-          // Injeção de dados de base no primeiro acesso (Garante estabilidade na visualização)
-          PRELOADED_PATIENTS.forEach(p => {
-              setDoc(doc(db, 'artifacts', appId, 'users', authUser.uid, 'patients', p.id), p).catch(e => console.error(e));
-          });
-          window.__db_seeded_uti = true;
+        // Injeção de dados de base no primeiro acesso
+        PRELOADED_PATIENTS.forEach(p => {
+          savePatientToSupabase(p).catch(e => console.error(e));
+        });
+        window.__db_seeded_uti = true;
       } else if (loadedPts.length > 0) {
-          setPatients(loadedPts);
+        setPatients(loadedPts);
       } else {
-          setPatients([]);
+        setPatients([]);
       }
       setCloudStatus('connected');
     }, (error) => {
       console.error("Erro na sincronização:", error);
       setCloudStatus('error');
     });
-    
-    return () => unsub();
+
+    return unsub;
   }, [authUser]);
 
   const triggerUpdatePatient = (updatedPatient) => {
     if (authUser) {
-      setDoc(doc(db, 'artifacts', appId, 'users', authUser.uid, 'patients', updatedPatient.id), updatedPatient)
+      savePatientToSupabase(updatedPatient)
         .catch(e => console.error("Falha ao salvar:", e));
     } else {
       setPatients(pts => pts.map(p => p.id === updatedPatient.id ? updatedPatient : p));
@@ -465,10 +432,10 @@ export default function App() {
   const addPatient = () => {
     const newPatient = getInitialState(activeTab === 'IMPORT' ? 'UTI 2' : activeTab);
     if (authUser) {
-       setDoc(doc(db, 'artifacts', appId, 'users', authUser.uid, 'patients', newPatient.id), newPatient)
-         .catch(e => console.error(e));
+      savePatientToSupabase(newPatient)
+        .catch(e => console.error(e));
     } else {
-       setPatients([...patients, newPatient]);
+      setPatients([...patients, newPatient]);
     }
     setActivePatientId(newPatient.id);
   };
@@ -476,9 +443,9 @@ export default function App() {
   const triggerDeletePatient = (id, callback) => {
     showConfirm("Tem a certeza que deseja eliminar este paciente?", () => {
       if (authUser) {
-         deleteDoc(doc(db, 'artifacts', appId, 'users', authUser.uid, 'patients', id)).catch(e => console.error(e));
+        deletePatientFromSupabase(id).catch(e => console.error(e));
       } else {
-         setPatients(prev => prev.filter(p => p.id !== id));
+        setPatients(prev => prev.filter(p => p.id !== id));
       }
       if (callback) callback();
     });
@@ -487,11 +454,11 @@ export default function App() {
   const clearAllData = () => {
     showConfirm("ATENÇÃO PERIGO: Isto irá apagar TODOS os pacientes de TODAS as UTIs do sistema na NUVEM. Confirma?", async () => {
       if (authUser) {
-         for (const p of patients) {
-            await deleteDoc(doc(db, 'artifacts', appId, 'users', authUser.uid, 'patients', p.id)).catch(e => console.error(e));
-         }
+        for (const p of patients) {
+          await deletePatientFromSupabase(p.id).catch(e => console.error(e));
+        }
       } else {
-         setPatients([]);
+        setPatients([]);
       }
       setIsSettingsOpen(false);
     });
@@ -507,50 +474,50 @@ export default function App() {
   const displayedPatients = patients.filter(p => p.uti === activeTab);
 
   const copyAllPatients = () => {
-    if(displayedPatients.length === 0) return showAlert('Nenhum paciente registado nesta UTI!');
+    if (displayedPatients.length === 0) return showAlert('Nenhum paciente registado nesta UTI!');
     const allText = displayedPatients.map(p => generateSinglePatientText(p)).join('\n\n=========================================================\n\n');
-    
+
     try {
-        navigator.clipboard.writeText(allText).then(() => showAlert('Plantão completo copiado com sucesso!'));
+      navigator.clipboard.writeText(allText).then(() => showAlert('Plantão completo copiado com sucesso!'));
     } catch (err) {
-        const textArea = document.createElement("textarea");
-        textArea.value = allText;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        textArea.setAttribute("aria-hidden", "true");
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showAlert('Plantão completo copiado com sucesso (via execCommand)!');
-        } catch (err) {
-            showAlert('Falha ao copiar o plantão.');
-        }
-        document.body.removeChild(textArea);
+      const textArea = document.createElement("textarea");
+      textArea.value = allText;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.setAttribute("aria-hidden", "true");
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showAlert('Plantão completo copiado com sucesso (via execCommand)!');
+      } catch (err) {
+        showAlert('Falha ao copiar o plantão.');
+      }
+      document.body.removeChild(textArea);
     }
   };
 
   const exportToCSV = () => {
-    if(displayedPatients.length === 0) return showAlert('Nenhum paciente para exportar.');
-    
+    if (displayedPatients.length === 0) return showAlert('Nenhum paciente para exportar.');
+
     const headers = ['UTI', 'Leito', 'Nome do Paciente', 'Gravidade', 'SOFA Estimado', 'Alerta Sepse', 'Diagnóstico/HD'];
     const rows = displayedPatients.map(p => {
-        const intell = getClinicalIntelligence(p);
-        return [
-          p.uti, 
-          p.leito, 
-          p.nome || 'Não identificado', 
-          p.gravidade || 'Não definida', 
-          intell.sofa, 
-          intell.isSeptic ? 'SIM' : 'NÃO', 
-          p.hd || 'Sem dados'
-        ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
+      const intell = getClinicalIntelligence(p);
+      return [
+        p.uti,
+        p.leito,
+        p.nome || 'Não identificado',
+        p.gravidade || 'Não definida',
+        intell.sofa,
+        intell.isSeptic ? 'SIM' : 'NÃO',
+        p.hd || 'Sem dados'
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
     });
-    
+
     const csvContent = [headers.join(','), ...rows].join('\n');
-    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' }); 
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement("a");
     link.setAttribute("href", url);
     link.setAttribute("download", `Relatorio_UTI_${new Date().toISOString().slice(0, 10)}.csv`);
@@ -561,7 +528,7 @@ export default function App() {
 
   const handleAIImport = async () => {
     if (!importText.trim()) return showAlert("Cole as evoluções para importar.");
-    const apiKey = userApiKey.trim() || ""; 
+    const apiKey = userApiKey.trim() || "";
 
     setIsImporting(true);
     setImportStatus('Estabelecendo link seguro com a IA...');
@@ -637,11 +604,11 @@ export default function App() {
       };
 
       const result = await fetchWithBackoff();
-      
+
       setImportStatus('Processando matriz de dados e limites absurdos...');
       let rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) throw new Error("Resposta vazia da IA.");
-      
+
       rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
       const parsedData = JSON.parse(rawText);
 
@@ -661,15 +628,15 @@ export default function App() {
             infecto: { ...base.infecto, ...(p.infecto || {}) }
           };
         });
-        
+
         if (authUser) {
-           newPatients.forEach(p => {
-              setDoc(doc(db, 'artifacts', appId, 'users', authUser.uid, 'patients', p.id), p).catch(e => console.error(e));
-           });
+          newPatients.forEach(p => {
+            savePatientToSupabase(p).catch(e => console.error(e));
+          });
         } else {
-           setPatients(prev => [...prev, ...newPatients]);
+          setPatients(prev => [...prev, ...newPatients]);
         }
-        
+
         showAlert(`SUCESSO: ${newPatients.length} pacientes importados com extração OCR e validação estruturada!`);
         setImportText('');
         setActiveTab(importTargetUTI);
@@ -715,10 +682,10 @@ export default function App() {
 
       {/* MÓDULO DE DIÁLOGO TÁTICO INTEGRADO (A11Y ROLES) */}
       {dialog.isOpen && (
-        <div 
-          role="alertdialog" 
-          aria-modal="true" 
-          aria-labelledby="dialog-title" 
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="dialog-title"
           aria-describedby="dialog-desc"
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
         >
@@ -730,19 +697,19 @@ export default function App() {
             <p id="dialog-desc" className="text-sm font-medium text-slate-500 mb-6">{dialog.message}</p>
             <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
               {dialog.type === 'confirm' && (
-                <button 
-                  onClick={closeDialog} 
+                <button
+                  onClick={closeDialog}
                   aria-label="Cancelar ação"
                   className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
                 >
                   Cancelar
                 </button>
               )}
-              <button 
-                onClick={() => { 
-                  if (dialog.onConfirm) dialog.onConfirm(); 
-                  closeDialog(); 
-                }} 
+              <button
+                onClick={() => {
+                  if (dialog.onConfirm) dialog.onConfirm();
+                  closeDialog();
+                }}
                 aria-label={dialog.type === 'confirm' ? 'Confirmar Ação' : 'Entendido'}
                 className={`flex-1 font-bold py-2.5 px-4 rounded-xl transition-colors text-white focus:outline-none focus:ring-2 ${dialog.type === 'confirm' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'}`}
               >
@@ -755,63 +722,63 @@ export default function App() {
 
       {/* MODAL DE CONFIGURAÇÕES */}
       {isSettingsOpen && (
-        <div 
-          role="dialog" 
-          aria-modal="true" 
+        <div
+          role="dialog"
+          aria-modal="true"
           aria-labelledby="settings-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
         >
           <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
-            <button 
-              onClick={() => setIsSettingsOpen(false)} 
+            <button
+              onClick={() => setIsSettingsOpen(false)}
               aria-label="Fechar configurações"
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500 rounded p-1"
             >
-              <Trash2 size={24} className="hidden" aria-hidden="true"/>
+              <Trash2 size={24} className="hidden" aria-hidden="true" />
             </button>
-            <h2 id="settings-title" className="text-2xl font-black mb-6 flex items-center gap-2 text-slate-800"><Settings className="text-slate-500" aria-hidden="true"/> Configurações</h2>
-            
+            <h2 id="settings-title" className="text-2xl font-black mb-6 flex items-center gap-2 text-slate-800"><Settings className="text-slate-500" aria-hidden="true" /> Configurações</h2>
+
             <div className="space-y-6">
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-700">Modo Noturno</span>
                   <span className="text-xs text-slate-500">Alivia os olhos durante a noite</span>
                 </div>
-                <button 
-                  onClick={() => setIsDarkMode(!isDarkMode)} 
+                <button
+                  onClick={() => setIsDarkMode(!isDarkMode)}
                   aria-label={isDarkMode ? "Mudar para modo claro" : "Mudar para modo escuro"}
                   className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}
                 >
-                  {isDarkMode ? <Moon size={20} aria-hidden="true"/> : <Sun size={20} aria-hidden="true"/>}
+                  {isDarkMode ? <Moon size={20} aria-hidden="true" /> : <Sun size={20} aria-hidden="true" />}
                 </button>
               </div>
 
               <div className="flex flex-col gap-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <label htmlFor="api-key-input" className="font-bold text-slate-700 flex items-center gap-1"><Wand2 size={16} aria-hidden="true"/> Chave API (Google Gemini)</label>
+                <label htmlFor="api-key-input" className="font-bold text-slate-700 flex items-center gap-1"><Wand2 size={16} aria-hidden="true" /> Chave API (Google Gemini)</label>
                 <span className="text-xs text-slate-500 leading-tight">Apenas necessária se rodar fora desta plataforma. Deixe em branco aqui.</span>
-                <input 
+                <input
                   id="api-key-input"
-                  type="password" 
-                  placeholder="Cole a sua API Key aqui..." 
-                  className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm" 
-                  value={userApiKey} 
-                  onChange={(e) => setUserApiKey(e.target.value)} 
+                  type="password"
+                  placeholder="Cole a sua API Key aqui..."
+                  className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                  value={userApiKey}
+                  onChange={(e) => setUserApiKey(e.target.value)}
                 />
               </div>
 
               <div className="p-4 bg-red-50 rounded-xl border border-red-200 !bg-red-50 !border-red-200">
-                <h3 className="font-bold text-red-700 flex items-center gap-1 mb-2 !text-red-700"><AlertTriangle size={16} aria-hidden="true"/> Zona de Perigo</h3>
-                <button 
-                  onClick={clearAllData} 
+                <h3 className="font-bold text-red-700 flex items-center gap-1 mb-2 !text-red-700"><AlertTriangle size={16} aria-hidden="true" /> Zona de Perigo</h3>
+                <button
+                  onClick={clearAllData}
                   aria-label="Zerar Todos os Dados do Sistema"
                   className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                 >
-                  <Trash2 size={18} aria-hidden="true"/> Zerar Todos os Dados
+                  <Trash2 size={18} aria-hidden="true" /> Zerar Todos os Dados
                 </button>
               </div>
             </div>
-            <button 
-              onClick={() => setIsSettingsOpen(false)} 
+            <button
+              onClick={() => setIsSettingsOpen(false)}
               aria-label="Fechar janela de configurações"
               className="mt-8 w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
             >
@@ -829,13 +796,13 @@ export default function App() {
               <div>
                 <h1 className="text-3xl font-black tracking-tight text-slate-800">Passagem de Turno</h1>
                 <h2 className="text-emerald-600 font-bold flex items-center gap-2">
-                  Gestão Clínica Inteligente 
+                  Gestão Clínica Inteligente
                   {cloudStatus === 'connected' ? <Cloud size={14} title="Nuvem Sincronizada" /> : <CloudOff size={14} className="text-red-500" title="Nuvem Offline" />}
                 </h2>
               </div>
             </div>
-            <button 
-              onClick={() => setIsSettingsOpen(true)} 
+            <button
+              onClick={() => setIsSettingsOpen(true)}
               aria-label="Abrir Configurações do Sistema"
               className="p-3 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-colors text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500"
             >
@@ -848,14 +815,14 @@ export default function App() {
               const isActive = activeTab === tab.id;
               const TabIcon = tab.icon;
               return (
-                <button 
-                  key={tab.id} 
-                  onClick={() => setActiveTab(tab.id)} 
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
                   aria-pressed={isActive}
                   aria-label={`Visualizar ${tab.label}`}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold whitespace-nowrap transition-all shadow-sm snap-start focus:outline-none focus:ring-2 focus:ring-slate-500 ${isActive ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}
                 >
-                  <TabIcon size={18} aria-hidden="true"/> {tab.label}
+                  <TabIcon size={18} aria-hidden="true" /> {tab.label}
                   {tab.id !== 'IMPORT' && <span className={`ml-2 px-2 py-0.5 rounded-md text-xs ${isActive ? 'bg-white/20' : 'bg-slate-200 text-slate-600'}`} aria-label={`${patients.filter(p => p.uti === tab.id).length} pacientes`}>{patients.filter(p => p.uti === tab.id).length}</span>}
                 </button>
               )
@@ -865,7 +832,7 @@ export default function App() {
           {activeTab === 'IMPORT' && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 animate-in fade-in duration-300">
               <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-                <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg"><Wand2 size={24} aria-hidden="true"/></div>
+                <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg"><Wand2 size={24} aria-hidden="true" /></div>
                 <div>
                   <h3 className="text-xl font-black text-slate-800">Importação com IA (OCR Validado)</h3>
                   <p className="text-sm text-slate-500 font-medium">Cole o texto/OCR do plantão. A IA corrige valores, extrai cartões e faz validação Max/Min.</p>
@@ -875,10 +842,10 @@ export default function App() {
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 w-fit">
                   <label htmlFor="import-target" className="font-bold text-slate-700 text-sm">1. Destino da Importação:</label>
-                  <select 
+                  <select
                     id="import-target"
-                    className="bg-white border border-slate-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-slate-800" 
-                    value={importTargetUTI} 
+                    className="bg-white border border-slate-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm text-slate-800"
+                    value={importTargetUTI}
                     onChange={(e) => setImportTargetUTI(e.target.value)}
                   >
                     <option value="UTI 2">UTI 2</option>
@@ -889,22 +856,22 @@ export default function App() {
 
                 <div className="flex flex-col gap-1">
                   <label htmlFor="import-text" className="font-bold text-slate-700 text-sm ml-1">2. Texto das Evoluções/OCR:</label>
-                  <textarea 
+                  <textarea
                     id="import-text"
-                    className="w-full h-64 p-4 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-y text-sm font-medium bg-slate-50/50" 
+                    className="w-full h-64 p-4 rounded-xl border border-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-y text-sm font-medium bg-slate-50/50"
                     placeholder="Cole aqui o texto da evolução médica ou OCR de exames..."
                     value={importText}
                     onChange={(e) => setImportText(e.target.value)}
                   ></textarea>
                 </div>
 
-                <button 
-                  onClick={handleAIImport} 
+                <button
+                  onClick={handleAIImport}
                   disabled={isImporting}
                   aria-label={isImporting ? "A processar importação com IA" : "Extrair Cartões com IA"}
                   className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all shadow-md mt-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isImporting ? 'bg-indigo-300 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white active:scale-[0.99]'}`}
                 >
-                  {isImporting ? <><Activity className="animate-spin" size={24} aria-hidden="true"/> <span className="text-sm sm:text-lg">{importStatus || 'Processando...'}</span></> : <><Wand2 size={24} aria-hidden="true"/> Extrair Cartões com IA</>}
+                  {isImporting ? <><Activity className="animate-spin" size={24} aria-hidden="true" /> <span className="text-sm sm:text-lg">{importStatus || 'Processando...'}</span></> : <><Wand2 size={24} aria-hidden="true" /> Extrair Cartões com IA</>}
                 </button>
               </div>
             </div>
@@ -913,24 +880,24 @@ export default function App() {
           {activeTab !== 'IMPORT' && (
             <div className="animate-in fade-in duration-300">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-                <h3 className="text-xl font-black text-slate-700 flex items-center gap-2"><ClipboardList aria-hidden="true"/> Gestão de Leitos</h3>
+                <h3 className="text-xl font-black text-slate-700 flex items-center gap-2"><ClipboardList aria-hidden="true" /> Gestão de Leitos</h3>
                 <div className="flex flex-wrap gap-2">
-                  <button 
-                    onClick={exportToCSV} 
+                  <button
+                    onClick={exportToCSV}
                     aria-label="Baixar Relatório em Excel/CSV"
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <Download size={16} aria-hidden="true" /> <span className="hidden sm:inline">Exportar Excel</span>
                   </button>
-                  <button 
-                    onClick={copyAllPatients} 
+                  <button
+                    onClick={copyAllPatients}
                     aria-label="Copiar dados de todos os pacientes deste plantão"
                     className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-slate-500"
                   >
                     <Copy size={16} aria-hidden="true" /> <span className="hidden sm:inline">Copiar Plantão</span>
                   </button>
-                  <button 
-                    onClick={addPatient} 
+                  <button
+                    onClick={addPatient}
                     aria-label="Adicionar Novo Paciente"
                     className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
@@ -952,7 +919,7 @@ export default function App() {
 
                     const getGravityColor = () => {
                       if (intell.isSeptic) return 'border-l-red-600 bg-red-50/50 sepsis-alert';
-                      switch(p.gravidade) {
+                      switch (p.gravidade) {
                         case 'Crítico': return 'border-l-red-500 bg-red-50/30';
                         case 'Instável': return 'border-l-orange-500 bg-orange-50/30';
                         case 'Potencialmente Instável': return 'border-l-yellow-500 bg-yellow-50/30';
@@ -969,23 +936,23 @@ export default function App() {
                     const hasPendencias = p.pendencias && p.pendencias.some(pend => pend.text.trim() !== '');
 
                     return (
-                      <div 
-                        key={p.id} 
+                      <div
+                        key={p.id}
                         role="listitem"
                         tabIndex={0}
                         aria-label={`Visualizar paciente ${p.nome || 'Não identificado'}, Leito ${p.leito || 'Desconhecido'}`}
-                        onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') setActivePatientId(p.id) }}
-                        className={`relative flex flex-col justify-between p-4 rounded-2xl shadow-md border-y border-r border-l-8 ${getGravityColor()} hover:shadow-md transition-all hover:-translate-y-1 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700`} 
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActivePatientId(p.id) }}
+                        className={`relative flex flex-col justify-between p-4 rounded-2xl shadow-md border-y border-r border-l-8 ${getGravityColor()} hover:shadow-md transition-all hover:-translate-y-1 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:border-slate-700`}
                         onClick={() => setActivePatientId(p.id)}
                       >
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); triggerDeletePatient(p.id); }} 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); triggerDeletePatient(p.id); }}
                           aria-label={`Eliminar paciente ${p.nome || 'Não identificado'}`}
                           className="absolute top-3 right-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
                         >
                           <Trash2 size={16} aria-hidden="true" />
                         </button>
-                        
+
                         <div>
                           <div className="flex items-baseline justify-between gap-2 mb-1">
                             <div className="flex items-baseline gap-2">
@@ -993,27 +960,27 @@ export default function App() {
                               <span className="text-2xl font-black text-slate-800">{p.leito || '-'}</span>
                             </div>
                             <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md ${intell.sofa >= 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`} title="SOFA Score" aria-label={`Score SOFA estimado: ${intell.sofa}`}>
-                              <Calculator size={10} aria-hidden="true"/> SOFA {intell.sofa}
+                              <Calculator size={10} aria-hidden="true" /> SOFA {intell.sofa}
                             </div>
                           </div>
-                          
+
                           <h3 className="font-bold text-lg text-slate-700 leading-tight mb-2 truncate" title={p.nome}>{p.nome || 'Não identificado'}</h3>
                           <p className="text-xs text-slate-500 font-medium line-clamp-2 leading-relaxed h-8">{p.hd || 'Sem HD informada'}</p>
                         </div>
 
                         {intell.isSeptic && (
-                           <div className="mt-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-wider py-1 px-2 rounded flex items-center justify-center gap-1 animate-pulse" role="alert" aria-live="assertive">
-                             <Flame size={12} aria-hidden="true"/> Alerta Sepse-3
-                           </div>
+                          <div className="mt-2 bg-red-600 text-white text-[10px] font-black uppercase tracking-wider py-1 px-2 rounded flex items-center justify-center gap-1 animate-pulse" role="alert" aria-live="assertive">
+                            <Flame size={12} aria-hidden="true" /> Alerta Sepse-3
+                          </div>
                         )}
 
                         <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700 flex flex-wrap gap-2" aria-label="Suportes e Terapias Ativas">
-                          {hasDVA && <span className="flex items-center gap-1 bg-rose-100 text-rose-700 px-2 py-1 rounded text-[10px] font-bold" title="Drogas Vasoativas em uso"><Droplets size={12} aria-hidden="true"/> DVA</span>}
-                          {hasSed && <span className="flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold" title="Sedação em uso"><Syringe size={12} aria-hidden="true"/> Sed</span>}
-                          {hasVM && <span className="flex items-center gap-1 bg-sky-100 text-sky-700 px-2 py-1 rounded text-[10px] font-bold" title="Ventilação Mecânica Invasiva"><Wind size={12} aria-hidden="true"/> VM</span>}
-                          {hasVNI && <span className="flex items-center gap-1 bg-sky-50 text-sky-600 px-2 py-1 rounded text-[10px] font-bold border border-sky-100" title="Suporte Não Invasivo (VNI/CNAF)"><Wind size={12} aria-hidden="true"/> VNI</span>}
-                          {hasATB && <span className="flex items-center gap-1 bg-teal-100 text-teal-700 px-2 py-1 rounded text-[10px] font-bold" title="Antibióticos em uso"><Pill size={12} aria-hidden="true"/> ATB</span>}
-                          {hasPendencias && <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold ml-auto" title="Possui pendências em aberto"><ClipboardList size={12} aria-hidden="true"/></span>}
+                          {hasDVA && <span className="flex items-center gap-1 bg-rose-100 text-rose-700 px-2 py-1 rounded text-[10px] font-bold" title="Drogas Vasoativas em uso"><Droplets size={12} aria-hidden="true" /> DVA</span>}
+                          {hasSed && <span className="flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold" title="Sedação em uso"><Syringe size={12} aria-hidden="true" /> Sed</span>}
+                          {hasVM && <span className="flex items-center gap-1 bg-sky-100 text-sky-700 px-2 py-1 rounded text-[10px] font-bold" title="Ventilação Mecânica Invasiva"><Wind size={12} aria-hidden="true" /> VM</span>}
+                          {hasVNI && <span className="flex items-center gap-1 bg-sky-50 text-sky-600 px-2 py-1 rounded text-[10px] font-bold border border-sky-100" title="Suporte Não Invasivo (VNI/CNAF)"><Wind size={12} aria-hidden="true" /> VNI</span>}
+                          {hasATB && <span className="flex items-center gap-1 bg-teal-100 text-teal-700 px-2 py-1 rounded text-[10px] font-bold" title="Antibióticos em uso"><Pill size={12} aria-hidden="true" /> ATB</span>}
+                          {hasPendencias && <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded text-[10px] font-bold ml-auto" title="Possui pendências em aberto"><ClipboardList size={12} aria-hidden="true" /></span>}
                         </div>
                       </div>
                     );
@@ -1024,8 +991,8 @@ export default function App() {
           )}
         </div>
       ) : (
-        <PatientCard 
-          data={patients.find(p => p.id === activePatientId)} 
+        <PatientCard
+          data={patients.find(p => p.id === activePatientId)}
           updatePatientObj={triggerUpdatePatient}
           onBack={() => setActivePatientId(null)}
           onDelete={() => triggerDeletePatient(activePatientId, () => setActivePatientId(null))}
@@ -1071,11 +1038,11 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
   const addInfusao = (tipo) => {
     updatePatientObj({ ...data, [tipo]: [...(data[tipo] || []), { droga: '', diluicao: 0, vazao: '' }] });
   };
-  
+
   const removeInfusao = (tipo, index) => {
     updatePatientObj({ ...data, [tipo]: data[tipo].filter((_, i) => i !== index) });
   };
-  
+
   const updateInfusao = (tipo, index, field, value) => {
     const newArray = [...data[tipo]];
     newArray[index] = { ...newArray[index], [field]: value };
@@ -1087,13 +1054,13 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
     const newAtbs = [...(data.infecto.atbs || []), { nome: '', nomePersonalizado: '', dose: '', dias: '' }];
     updatePatientObj({ ...data, infecto: { ...data.infecto, atbs: newAtbs } });
   };
-  
+
   const removeAtb = (index) => {
     const newAtbs = [...data.infecto.atbs];
     newAtbs.splice(index, 1);
     updatePatientObj({ ...data, infecto: { ...data.infecto, atbs: newAtbs } });
   };
-  
+
   const updateAtb = (index, field, value) => {
     const newAtbs = [...data.infecto.atbs];
     newAtbs[index] = { ...newAtbs[index], [field]: value };
@@ -1104,13 +1071,13 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
     const newCults = [...(data.infecto.culturas || []), { tipo: '', data: '', status: '', detalhe: '' }];
     updatePatientObj({ ...data, infecto: { ...data.infecto, culturas: newCults } });
   };
-  
+
   const removeCultura = (index) => {
     const newCults = [...data.infecto.culturas];
     newCults.splice(index, 1);
     updatePatientObj({ ...data, infecto: { ...data.infecto, culturas: newCults } });
   };
-  
+
   const updateCultura = (index, field, value) => {
     const newCults = [...data.infecto.culturas];
     newCults[index] = { ...newCults[index], [field]: value };
@@ -1121,12 +1088,12 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
     const newEscalas = [...(data.neuro.escalas || []), { nome: '', valor: '' }];
     updatePatientObj({ ...data, neuro: { ...data.neuro, escalas: newEscalas } });
   };
-  
+
   const removeEscala = (index) => {
     const newEscalas = data.neuro.escalas.filter((_, i) => i !== index);
     updatePatientObj({ ...data, neuro: { ...data.neuro, escalas: newEscalas } });
   };
-  
+
   const updateEscala = (index, field, value) => {
     const newEscalas = [...data.neuro.escalas];
     newEscalas[index] = { ...newEscalas[index], [field]: value };
@@ -1136,22 +1103,22 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
   const handleCopy = () => {
     const textToCopy = generateSinglePatientText(data);
     try {
-        navigator.clipboard.writeText(textToCopy).then(() => showAlert('Paciente copiado com sucesso!'));
+      navigator.clipboard.writeText(textToCopy).then(() => showAlert('Paciente copiado com sucesso!'));
     } catch (err) {
-        const textArea = document.createElement("textarea");
-        textArea.value = textToCopy;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-9999px";
-        textArea.setAttribute("aria-hidden", "true");
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            showAlert('Paciente copiado com sucesso (via execCommand)!');
-        } catch (err) {
-            showAlert('Falha ao copiar.');
-        }
-        document.body.removeChild(textArea);
+      const textArea = document.createElement("textarea");
+      textArea.value = textToCopy;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.setAttribute("aria-hidden", "true");
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showAlert('Paciente copiado com sucesso (via execCommand)!');
+      } catch (err) {
+        showAlert('Falha ao copiar.');
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -1159,14 +1126,14 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
   return (
     <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden print-border-none mt-4 md:mt-8 animate-in slide-in-from-bottom-4 duration-300">
-      
+
       {/* HEADER DO CARTÃO */}
       <div className="bg-slate-800 text-white p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:bg-white print:text-black print:border-b-2 print:border-black">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <button 
-            onClick={onBack} 
+          <button
+            onClick={onBack}
             aria-label="Voltar à visão geral dos leitos"
-            className="no-print bg-slate-700 hover:bg-slate-600 p-2.5 rounded-xl transition-colors mr-2 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-white" 
+            className="no-print bg-slate-700 hover:bg-slate-600 p-2.5 rounded-xl transition-colors mr-2 flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-white"
             title="Voltar ao Mapa da UTI"
           >
             <ArrowLeft size={24} className="text-white" aria-hidden="true" />
@@ -1178,23 +1145,23 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto no-print">
-          <button 
-            onClick={onDelete} 
+          <button
+            onClick={onDelete}
             aria-label="Eliminar Registo deste Paciente"
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-700 hover:bg-red-600 px-4 py-2 sm:py-3 rounded-xl font-semibold transition-all active:scale-95 shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500" 
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-700 hover:bg-red-600 px-4 py-2 sm:py-3 rounded-xl font-semibold transition-all active:scale-95 shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500"
             title="Apagar este paciente"
           >
             <Trash2 size={18} aria-hidden="true" />
           </button>
-          <button 
-            onClick={handleCopy} 
+          <button
+            onClick={handleCopy}
             aria-label="Copiar relatório estruturado do paciente"
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 px-4 py-2 sm:py-3 rounded-xl font-semibold transition-all active:scale-95 shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
           >
             <Copy size={18} aria-hidden="true" /> Copiar
           </button>
-          <button 
-            onClick={window.print} 
+          <button
+            onClick={window.print}
             aria-label="Imprimir ficha do paciente"
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 sm:py-3 rounded-xl font-semibold transition-all active:scale-95 shadow-lg focus:outline-none focus:ring-2 focus:ring-white"
           >
@@ -1219,22 +1186,22 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
               </p>
             </div>
           </div>
-          
+
           <div className="flex flex-col items-start sm:items-end gap-1">
-             {intell.sofaDet.length > 0 && (
-               <div className="flex flex-wrap gap-1" aria-label="Detalhes do cálculo SOFA">
-                 {intell.sofaDet.map((d, i) => <span key={i} className="text-[9px] font-bold bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{d}</span>)}
-               </div>
-             )}
-             {intell.missing.length > 0 && (
-               <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">Faltam dados: {intell.missing.join(', ')}</span>
-             )}
+            {intell.sofaDet.length > 0 && (
+              <div className="flex flex-wrap gap-1" aria-label="Detalhes do cálculo SOFA">
+                {intell.sofaDet.map((d, i) => <span key={i} className="text-[9px] font-bold bg-white border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded">{d}</span>)}
+              </div>
+            )}
+            {intell.missing.length > 0 && (
+              <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">Faltam dados: {intell.missing.join(', ')}</span>
+            )}
           </div>
         </div>
       </div>
 
       <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 bg-slate-50 print:bg-white pt-2">
-        
+
         {/* IDENTIFICAÇÃO BÁSICA */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm print:border-b space-y-3">
           <div className="flex flex-col sm:flex-row gap-3 border-b border-slate-100 pb-3 print:border-none">
@@ -1247,7 +1214,7 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
               <input id="input-leito" type="text" className="flex-1 border-b-2 border-slate-200 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 rounded px-1 font-bold text-lg dark-input" value={data.leito || ''} onChange={(e) => updateField('leito', e.target.value)} />
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-[2] min-w-[200px]">
               <label htmlFor="input-hd" className="font-bold text-slate-500 uppercase text-xs tracking-wider">HD:</label>
@@ -1286,11 +1253,11 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          
+
           {/* NEUROLÓGICO */}
           <div className="bg-purple-50 border-l-4 border-purple-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid">
             <div className="flex items-center justify-between mb-4 border-b border-purple-200 pb-2">
-              <h4 className="font-bold text-purple-800 uppercase tracking-widest text-sm flex items-center gap-2"><Brain size={16} aria-hidden="true"/> Neurológico</h4>
+              <h4 className="font-bold text-purple-800 uppercase tracking-widest text-sm flex items-center gap-2"><Brain size={16} aria-hidden="true" /> Neurológico</h4>
             </div>
 
             <div className="space-y-4 text-sm text-purple-900">
@@ -1300,12 +1267,12 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                   const doseData = calcDoseInfusao(sed, SEDACAO_DICT, data.peso);
                   return (
                     <div key={idx} className="bg-white p-3 rounded-xl border border-purple-100 relative shadow-sm">
-                      <button 
-                        onClick={() => removeInfusao('sedativos', idx)} 
+                      <button
+                        onClick={() => removeInfusao('sedativos', idx)}
                         aria-label={`Remover sedativo ${sed.droga || 'sem nome'}`}
                         className="absolute top-3 right-3 text-red-300 hover:text-red-500 no-print transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
                       >
-                        <Trash2 size={14} aria-hidden="true"/>
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 pr-6">
                         <div className="flex flex-col gap-1">
@@ -1333,8 +1300,8 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                           </div>
                           <div className="flex-1 sm:border-l-2 border-purple-200 pl-3">
                             {doseData ? (
-                              doseData.error ? <span className="text-[10px] font-bold text-red-500 flex items-center gap-1 bg-red-50 px-2 py-1 rounded w-fit"><AlertTriangle size={10} aria-hidden="true"/> {doseData.error}</span> : 
-                              <div className="flex flex-col"><span className="font-black text-purple-900 text-sm flex items-baseline gap-1" aria-label={`Dose calculada: ${doseData.value} ${doseData.unit}`}>{doseData.value} <span className="text-[10px] font-bold text-purple-600" aria-hidden="true">{doseData.unit}</span></span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-1 w-fit ${doseData.isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>Faixa Segura: {doseData.min} a {doseData.max}</span></div>
+                              doseData.error ? <span className="text-[10px] font-bold text-red-500 flex items-center gap-1 bg-red-50 px-2 py-1 rounded w-fit"><AlertTriangle size={10} aria-hidden="true" /> {doseData.error}</span> :
+                                <div className="flex flex-col"><span className="font-black text-purple-900 text-sm flex items-baseline gap-1" aria-label={`Dose calculada: ${doseData.value} ${doseData.unit}`}>{doseData.value} <span className="text-[10px] font-bold text-purple-600" aria-hidden="true">{doseData.unit}</span></span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-1 w-fit ${doseData.isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>Faixa Segura: {doseData.min} a {doseData.max}</span></div>
                             ) : <span className="text-[10px] text-slate-400 italic">Insira a vazão para calcular dose</span>}
                           </div>
                         </div>
@@ -1342,11 +1309,11 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                     </div>
                   );
                 })}
-                <button 
-                  onClick={() => addInfusao('sedativos')} 
+                <button
+                  onClick={() => addInfusao('sedativos')}
                   className="no-print w-full py-2 flex items-center justify-center gap-2 text-purple-600 bg-purple-100/50 hover:bg-purple-100 border-2 border-purple-200 border-dashed rounded-xl text-xs font-bold transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <Plus size={14} aria-hidden="true"/> Adicionar Nova Sedação
+                  <Plus size={14} aria-hidden="true" /> Adicionar Nova Sedação
                 </button>
               </Accordion>
 
@@ -1354,12 +1321,12 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                 {(!data.neuro.escalas || data.neuro.escalas.length === 0) && <div className="text-xs text-slate-400 italic py-1">Nenhuma escala registada.</div>}
                 {(data.neuro.escalas || []).map((esc, idx) => (
                   <div key={idx} className="bg-white p-3 rounded-xl border border-purple-100 relative shadow-sm">
-                    <button 
-                      onClick={() => removeEscala(idx)} 
+                    <button
+                      onClick={() => removeEscala(idx)}
                       aria-label="Remover esta escala"
                       className="absolute top-3 right-3 text-red-300 hover:text-red-500 no-print transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
                     >
-                      <Trash2 size={14} aria-hidden="true"/>
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                     <div className="flex flex-col gap-2 pr-6">
                       <div className="flex flex-wrap items-center gap-3">
@@ -1378,33 +1345,33 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                     </div>
                   </div>
                 ))}
-                <button 
-                  onClick={addEscala} 
+                <button
+                  onClick={addEscala}
                   className="no-print w-full py-2 flex items-center justify-center gap-2 text-purple-600 bg-purple-100/50 hover:bg-purple-100 border-2 border-purple-200 border-dashed rounded-xl text-xs font-bold transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <Plus size={14} aria-hidden="true"/> Adicionar Nova Escala
+                  <Plus size={14} aria-hidden="true" /> Adicionar Nova Escala
                 </button>
               </Accordion>
 
               <div className="flex flex-col gap-3 pt-3 mt-3 border-t border-purple-100">
                 <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                  <label htmlFor="input-pupilas" className="font-bold text-xs uppercase text-purple-800 shrink-0">Pupilas:</label> 
+                  <label htmlFor="input-pupilas" className="font-bold text-xs uppercase text-purple-800 shrink-0">Pupilas:</label>
                   <input id="input-pupilas" type="text" className="w-full bg-transparent border-b border-purple-300 focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500/30 rounded px-1 font-medium dark-input" value={data.neuro.pupilas || ''} onChange={(e) => updateField('neuro.pupilas', e.target.value)} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-3 pt-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-xs uppercase text-purple-800">Analgesia:</span>
-                    <InlineInput val={data.neuro.analgesia} path="neuro.analgesia" ph="____" w="w-20" updateField={updateField} ariaLabel="Nível de analgesia"/> 
+                    <InlineInput val={data.neuro.analgesia} path="neuro.analgesia" ph="____" w="w-20" updateField={updateField} ariaLabel="Nível de analgesia" />
                     <span className="text-[10px] text-purple-600 font-bold bg-white px-2 py-0.5 rounded shadow-sm border border-purple-100">Adequada</span>
                   </div>
                   <div className="hidden sm:block w-px h-6 bg-purple-200"></div>
                   <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg shadow-sm border border-purple-100">
                     <span className="font-bold text-xs uppercase text-purple-800 px-1" id="camicu-label">CAM-ICU:</span>
                     <label className="flex items-center gap-1 cursor-pointer font-bold text-purple-900 text-xs bg-purple-50 px-2 py-1 rounded hover:bg-purple-100 transition-colors focus-within:ring-2 focus-within:ring-purple-500">
-                      <input type="radio" name="camicu" checked={data.neuro.camIcu === 'Positivo'} onChange={() => updateField('neuro.camIcu', 'Positivo')} className="accent-purple-600 focus:outline-none" aria-labelledby="camicu-label"/> Pos
+                      <input type="radio" name="camicu" checked={data.neuro.camIcu === 'Positivo'} onChange={() => updateField('neuro.camIcu', 'Positivo')} className="accent-purple-600 focus:outline-none" aria-labelledby="camicu-label" /> Pos
                     </label>
                     <label className="flex items-center gap-1 cursor-pointer font-bold text-purple-900 text-xs bg-purple-50 px-2 py-1 rounded hover:bg-purple-100 transition-colors focus-within:ring-2 focus-within:ring-purple-500">
-                      <input type="radio" name="camicu" checked={data.neuro.camIcu === 'Negativo'} onChange={() => updateField('neuro.camIcu', 'Negativo')} className="accent-purple-600 focus:outline-none" aria-labelledby="camicu-label"/> Neg
+                      <input type="radio" name="camicu" checked={data.neuro.camIcu === 'Negativo'} onChange={() => updateField('neuro.camIcu', 'Negativo')} className="accent-purple-600 focus:outline-none" aria-labelledby="camicu-label" /> Neg
                     </label>
                   </div>
                 </div>
@@ -1416,9 +1383,9 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
           {/* RESPIRATÓRIO */}
           <div className="bg-sky-50 border-l-4 border-sky-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid">
-            <h4 className="font-bold text-sky-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-sky-200 pb-2"><Wind size={16} aria-hidden="true"/> Respiratório</h4>
+            <h4 className="font-bold text-sky-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-sky-200 pb-2"><Wind size={16} aria-hidden="true" /> Respiratório</h4>
             <div className="space-y-4 text-sm text-sky-900">
-              
+
               <div className="flex flex-col gap-3 bg-white p-3 rounded-xl border border-sky-100 shadow-sm">
                 <div className="flex flex-wrap items-center gap-3">
                   <label htmlFor="select-suporte-o2" className="font-bold text-xs uppercase text-sky-800">Suporte O2:</label>
@@ -1433,13 +1400,13 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                   {data.resp.suporte === 'IOT + VM' && (
                     <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 px-2 py-1 rounded-md ml-auto sm:ml-0">
                       <span className="text-[10px] font-bold text-sky-700 uppercase">Data IOT:</span>
-                      <InlineInput val={data.resp.dataIntubacao} path="resp.dataIntubacao" w="w-16" ph="dd/mm" updateField={updateField} ariaLabel="Data de Intubação"/>
+                      <InlineInput val={data.resp.dataIntubacao} path="resp.dataIntubacao" w="w-16" ph="dd/mm" updateField={updateField} ariaLabel="Data de Intubação" />
                     </div>
                   )}
                   {data.resp.suporte === 'CNL O2' && (
                     <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 px-2 py-1 rounded-md">
                       <span className="text-[10px] font-bold text-sky-700 uppercase">Vazão:</span>
-                      <InlineInput val={data.resp.vazaoO2} path="resp.vazaoO2" w="w-12" ph="L/m" updateField={updateField} type="number" ariaLabel="Vazão em Litros por minuto"/>
+                      <InlineInput val={data.resp.vazaoO2} path="resp.vazaoO2" w="w-12" ph="L/m" updateField={updateField} type="number" ariaLabel="Vazão em Litros por minuto" />
                       <span className="text-xs font-bold text-sky-600" aria-hidden="true">L/min</span>
                     </div>
                   )}
@@ -1447,13 +1414,13 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                     <div className="flex flex-wrap items-center gap-4 bg-sky-50 border border-sky-200 px-3 py-1 rounded-md">
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] font-bold text-sky-700 uppercase">Vazão:</span>
-                        <InlineInput val={data.resp.vazaoO2} path="resp.vazaoO2" w="w-10" ph="L/m" updateField={updateField} type="number" ariaLabel="Vazão O2"/>
+                        <InlineInput val={data.resp.vazaoO2} path="resp.vazaoO2" w="w-10" ph="L/m" updateField={updateField} type="number" ariaLabel="Vazão O2" />
                         <span className="text-[10px] font-bold text-sky-600" aria-hidden="true">L/min</span>
                       </div>
                       <div className="hidden sm:block w-px h-4 bg-sky-300"></div>
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] font-bold text-sky-700 uppercase">FiO2:</span>
-                        <InlineInput val={data.resp.fio2O2} path="resp.fio2O2" w="w-10" ph="%" updateField={updateField} type="number" ariaLabel="FiO2 percentagem"/>
+                        <InlineInput val={data.resp.fio2O2} path="resp.fio2O2" w="w-10" ph="%" updateField={updateField} type="number" ariaLabel="FiO2 percentagem" />
                         <span className="text-[10px] font-bold text-sky-600" aria-hidden="true">%</span>
                       </div>
                     </div>
@@ -1463,36 +1430,36 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                 {data.resp.suporte === 'IOT + VM' && (
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-sky-50/50 p-3 rounded-lg border border-sky-100 mt-1">
                     <div className="flex flex-col gap-1"><label htmlFor="vm-modo" className="text-[10px] font-bold uppercase text-sky-700">Modo</label><select id="vm-modo" className="bg-white border border-sky-200 rounded p-1 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs font-bold text-sky-900 dark-input" value={data.resp.vmModo || ''} onChange={(e) => updateField('resp.vmModo', e.target.value)}><option value="">-</option><option value="VCV">VCV</option><option value="PCV">PCV</option><option value="PRVC">PRVC</option><option value="PSV">PSV</option></select></div>
-                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">PEEP</span><InlineInput val={data.resp.vmPeep} path="resp.vmPeep" w="w-full" updateField={updateField} type="number" ariaLabel="PEEP"/></div>
-                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">FiO2 (%)</span><InlineInput val={data.resp.vmFio2} path="resp.vmFio2" w="w-full" updateField={updateField} type="number" ariaLabel="FiO2 ventilação"/></div>
-                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">Vol. Corr.</span><InlineInput val={data.resp.vmVc} path="resp.vmVc" w="w-full" updateField={updateField} type="number" ariaLabel="Volume Corrente"/></div>
-                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">P.Insp/PS</span><InlineInput val={data.resp.vmPinspPs} path="resp.vmPinspPs" w="w-full" updateField={updateField} type="number" ariaLabel="Pressão Inspiratória ou de Suporte"/></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">PEEP</span><InlineInput val={data.resp.vmPeep} path="resp.vmPeep" w="w-full" updateField={updateField} type="number" ariaLabel="PEEP" /></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">FiO2 (%)</span><InlineInput val={data.resp.vmFio2} path="resp.vmFio2" w="w-full" updateField={updateField} type="number" ariaLabel="FiO2 ventilação" /></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">Vol. Corr.</span><InlineInput val={data.resp.vmVc} path="resp.vmVc" w="w-full" updateField={updateField} type="number" ariaLabel="Volume Corrente" /></div>
+                    <div className="flex flex-col gap-1"><span className="text-[10px] font-bold uppercase text-sky-700">P.Insp/PS</span><InlineInput val={data.resp.vmPinspPs} path="resp.vmPinspPs" w="w-full" updateField={updateField} type="number" ariaLabel="Pressão Inspiratória ou de Suporte" /></div>
                   </div>
                 )}
               </div>
 
               <div className="flex flex-wrap gap-x-6 gap-y-3 bg-white p-3 rounded-xl border border-sky-100 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs uppercase text-sky-800">PaO2:</span> 
-                  <InlineInput val={data.resp.pao2} path="resp.pao2" w="w-10" updateField={updateField} type="number" ariaLabel="Pressão Parcial de Oxigênio (PaO2)"/> <span className="font-bold text-[10px] text-sky-600" aria-hidden="true">mmHg</span> 
+                  <span className="font-bold text-xs uppercase text-sky-800">PaO2:</span>
+                  <InlineInput val={data.resp.pao2} path="resp.pao2" w="w-10" updateField={updateField} type="number" ariaLabel="Pressão Parcial de Oxigênio (PaO2)" /> <span className="font-bold text-[10px] text-sky-600" aria-hidden="true">mmHg</span>
                 </div>
                 <div className="hidden sm:block w-px h-6 bg-sky-100"></div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs uppercase text-sky-800">FR:</span> 
-                  <InlineInput val={data.resp.fr1} path="resp.fr1" w="w-10" updateField={updateField} type="number" ariaLabel="Frequência Respiratória inicial"/> - <InlineInput val={data.resp.fr2} path="resp.fr2" w="w-10" updateField={updateField} type="number" ariaLabel="Frequência Respiratória final"/>
+                  <span className="font-bold text-xs uppercase text-sky-800">FR:</span>
+                  <InlineInput val={data.resp.fr1} path="resp.fr1" w="w-10" updateField={updateField} type="number" ariaLabel="Frequência Respiratória inicial" /> - <InlineInput val={data.resp.fr2} path="resp.fr2" w="w-10" updateField={updateField} type="number" ariaLabel="Frequência Respiratória final" />
                   {isHigh(data.resp.fr1, data.resp.fr2, 20) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded ml-1 animate-in fade-in" aria-label="Alerta FR alta">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>( <InlineInput val={data.resp.frX} path="resp.frX" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes FR maior que 20"/> x {'>'} 20 )
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />( <InlineInput val={data.resp.frX} path="resp.frX" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes FR maior que 20" /> x {'>'} 20 )
                     </span>
                   )}
                 </div>
                 <div className="hidden sm:block w-px h-6 bg-sky-100"></div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs uppercase text-sky-800">SpO2:</span> 
-                  <InlineInput val={data.resp.spo2} path="resp.spo2" w="w-10" updateField={updateField} type="number" ariaLabel="Saturação de Oxigênio (SpO2)"/> <span className="text-xs font-bold text-sky-600" aria-hidden="true">%</span> 
+                  <span className="font-bold text-xs uppercase text-sky-800">SpO2:</span>
+                  <InlineInput val={data.resp.spo2} path="resp.spo2" w="w-10" updateField={updateField} type="number" ariaLabel="Saturação de Oxigênio (SpO2)" /> <span className="text-xs font-bold text-sky-600" aria-hidden="true">%</span>
                   {isLow(data.resp.spo2, '', 92) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded ml-1 animate-in fade-in" aria-label="Alerta SpO2 baixa">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>( <InlineInput val={data.resp.spo2X} path="resp.spo2X" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes SpO2 menor que 92"/> x {'<'} 92 )
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />( <InlineInput val={data.resp.spo2X} path="resp.spo2X" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes SpO2 menor que 92" /> x {'<'} 92 )
                     </span>
                   )}
                 </div>
@@ -1516,21 +1483,21 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
           {/* HEMODINÂMICO */}
           <div className="bg-rose-50 border-l-4 border-rose-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid lg:col-span-2">
             <div className="flex items-center justify-between mb-4 border-b border-rose-200 pb-2">
-              <h4 className="font-bold text-rose-800 uppercase tracking-widest text-sm flex items-center gap-2"><HeartPulse size={16} aria-hidden="true"/> Hemodinâmico</h4>
+              <h4 className="font-bold text-rose-800 uppercase tracking-widest text-sm flex items-center gap-2"><HeartPulse size={16} aria-hidden="true" /> Hemodinâmico</h4>
             </div>
-            
+
             <Accordion title="Drogas Vasoativas (DVA)" icon={Droplets} count={(data.dvas || []).length} isOpen={expandedSections.dvas} onToggle={() => toggleSection('dvas')} colorClass="rose">
               {(!data.dvas || data.dvas.length === 0) && <span className="text-xs text-slate-400 italic block py-1">Nenhuma DVA em uso.</span>}
               {(data.dvas || []).map((dva, idx) => {
                 const doseData = calcDoseInfusao(dva, DVA_DICT, data.peso);
                 return (
                   <div key={idx} className="bg-white p-3 rounded-xl border border-rose-100 relative shadow-sm">
-                    <button 
-                      onClick={() => removeInfusao('dvas', idx)} 
+                    <button
+                      onClick={() => removeInfusao('dvas', idx)}
                       aria-label={`Remover DVA ${dva.droga || 'sem nome'}`}
                       className="absolute top-3 right-3 text-red-300 hover:text-red-500 no-print transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
                     >
-                      <Trash2 size={14} aria-hidden="true"/>
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 pr-6">
                       <div className="flex flex-col gap-1">
@@ -1558,8 +1525,8 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                         </div>
                         <div className="flex-1 sm:border-l-2 border-rose-200 pl-3">
                           {doseData ? (
-                            doseData.error ? <span className="text-[10px] font-bold text-red-500 flex items-center gap-1 bg-red-50 px-2 py-1 rounded w-fit"><AlertTriangle size={10} aria-hidden="true"/> {doseData.error}</span> : 
-                            <div className="flex flex-col"><span className="font-black text-rose-900 text-sm flex items-baseline gap-1" aria-label={`Dose calculada: ${doseData.value} ${doseData.unit}`}>{doseData.value} <span className="text-[10px] font-bold text-rose-600" aria-hidden="true">{doseData.unit}</span></span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-1 w-fit ${doseData.isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>Faixa Segura: {doseData.min} a {doseData.max}</span></div>
+                            doseData.error ? <span className="text-[10px] font-bold text-red-500 flex items-center gap-1 bg-red-50 px-2 py-1 rounded w-fit"><AlertTriangle size={10} aria-hidden="true" /> {doseData.error}</span> :
+                              <div className="flex flex-col"><span className="font-black text-rose-900 text-sm flex items-baseline gap-1" aria-label={`Dose calculada: ${doseData.value} ${doseData.unit}`}>{doseData.value} <span className="text-[10px] font-bold text-rose-600" aria-hidden="true">{doseData.unit}</span></span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-1 w-fit ${doseData.isOk ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>Faixa Segura: {doseData.min} a {doseData.max}</span></div>
                           ) : <span className="text-[10px] text-slate-400 italic">Insira a vazão para calcular dose</span>}
                         </div>
                       </div>
@@ -1567,69 +1534,69 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                   </div>
                 );
               })}
-              <button 
-                onClick={() => addInfusao('dvas')} 
+              <button
+                onClick={() => addInfusao('dvas')}
                 className="no-print w-full py-2 flex items-center justify-center gap-2 text-rose-600 bg-rose-100/50 hover:bg-rose-100 border-2 border-rose-200 border-dashed rounded-xl text-xs font-bold transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-rose-500"
               >
-                <Plus size={14} aria-hidden="true"/> Adicionar Nova DVA
+                <Plus size={14} aria-hidden="true" /> Adicionar Nova DVA
               </button>
             </Accordion>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-rose-900 bg-white p-4 rounded-xl border border-rose-100 shadow-sm mt-3">
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2 border-b border-rose-50 pb-2">
-                  <span className="font-bold text-xs uppercase text-rose-800 w-8">PAS:</span> 
-                  <InlineInput val={data.hemo.pas1} path="hemo.pas1" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Sistólica Máxima"/>-<InlineInput val={data.hemo.pas2} path="hemo.pas2" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Sistólica Mínima"/>
+                  <span className="font-bold text-xs uppercase text-rose-800 w-8">PAS:</span>
+                  <InlineInput val={data.hemo.pas1} path="hemo.pas1" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Sistólica Máxima" />-<InlineInput val={data.hemo.pas2} path="hemo.pas2" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Sistólica Mínima" />
                   {isHigh(data.hemo.pas1, data.hemo.pas2, 180) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de pico hipertensivo PAS">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.pasX180} path="hemo.pasX180" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAS maior que 180"/>x {'>'} 180)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.pasX180} path="hemo.pasX180" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAS maior que 180" />x {'>'} 180)
                     </span>
                   )}
                   {isLow(data.hemo.pas1, data.hemo.pas2, 100) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de hipotensão PAS">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.pasX100} path="hemo.pasX100" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAS menor que 100"/>x {'<'} 100)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.pasX100} path="hemo.pasX100" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAS menor que 100" />x {'<'} 100)
                     </span>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 border-b border-rose-50 pb-2">
-                  <span className="font-bold text-xs uppercase text-rose-800 w-8">PAD:</span> 
-                  <InlineInput val={data.hemo.pad1} path="hemo.pad1" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Diastólica Máxima"/>-<InlineInput val={data.hemo.pad2} path="hemo.pad2" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Diastólica Mínima"/>
+                  <span className="font-bold text-xs uppercase text-rose-800 w-8">PAD:</span>
+                  <InlineInput val={data.hemo.pad1} path="hemo.pad1" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Diastólica Máxima" />-<InlineInput val={data.hemo.pad2} path="hemo.pad2" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Diastólica Mínima" />
                   {isHigh(data.hemo.pad1, data.hemo.pad2, 120) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de pico PAD">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.padX120} path="hemo.padX120" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAD maior que 120"/>x {'>'} 120)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.padX120} path="hemo.padX120" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAD maior que 120" />x {'>'} 120)
                     </span>
                   )}
                   {isLow(data.hemo.pad1, data.hemo.pad2, 50) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de hipotensão PAD">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.padX50} path="hemo.padX50" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAD menor que 50"/>x {'<'} 50)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.padX50} path="hemo.padX50" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAD menor que 50" />x {'<'} 50)
                     </span>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 border-b border-rose-50 pb-2">
-                  <span className="font-bold text-xs uppercase text-rose-800 w-8">PAm:</span> 
-                  <InlineInput val={data.hemo.pam1} path="hemo.pam1" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Média Máxima"/>-<InlineInput val={data.hemo.pam2} path="hemo.pam2" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Média Mínima"/>
+                  <span className="font-bold text-xs uppercase text-rose-800 w-8">PAm:</span>
+                  <InlineInput val={data.hemo.pam1} path="hemo.pam1" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Média Máxima" />-<InlineInput val={data.hemo.pam2} path="hemo.pam2" w="w-10" updateField={updateField} type="text" ariaLabel="Pressão Arterial Média Mínima" />
                   {isHigh(data.hemo.pam1, data.hemo.pam2, 130) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de pico PAM">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.pamX130} path="hemo.pamX130" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAM maior que 130"/>x {'>'} 130)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.pamX130} path="hemo.pamX130" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAM maior que 130" />x {'>'} 130)
                     </span>
                   )}
                   {isLow(data.hemo.pam1, data.hemo.pam2, 65) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de hipotensão PAM">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.pamX65} path="hemo.pamX65" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAM menor que 65"/>x {'<'} 65)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.pamX65} path="hemo.pamX65" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes PAM menor que 65" />x {'<'} 65)
                     </span>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-xs uppercase text-rose-800 w-8">FC:</span> 
-                  <InlineInput val={data.hemo.fc1} path="hemo.fc1" w="w-10" updateField={updateField} type="text" ariaLabel="Frequência Cardíaca Máxima"/>-<InlineInput val={data.hemo.fc2} path="hemo.fc2" w="w-10" updateField={updateField} type="text" ariaLabel="Frequência Cardíaca Mínima"/>
+                  <span className="font-bold text-xs uppercase text-rose-800 w-8">FC:</span>
+                  <InlineInput val={data.hemo.fc1} path="hemo.fc1" w="w-10" updateField={updateField} type="text" ariaLabel="Frequência Cardíaca Máxima" />-<InlineInput val={data.hemo.fc2} path="hemo.fc2" w="w-10" updateField={updateField} type="text" ariaLabel="Frequência Cardíaca Mínima" />
                   {isHigh(data.hemo.fc1, data.hemo.fc2, 100) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded animate-in fade-in" aria-label="Alerta de Taquicardia">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>(<InlineInput val={data.hemo.fcX100} path="hemo.fcX100" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes FC maior que 100"/>x {'>'} 100)
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />(<InlineInput val={data.hemo.fcX100} path="hemo.fcX100" w="w-6" updateField={updateField} type="number" ariaLabel="Quantas vezes FC maior que 100" />x {'>'} 100)
                     </span>
                   )}
                 </div>
               </div>
-              
+
               <div className="space-y-4 sm:border-l-2 border-rose-100 sm:pl-4 pt-3 sm:pt-0 border-t-2 sm:border-t-0">
                 <div className="flex flex-col gap-1">
                   <label htmlFor="hemo-ausc" className="font-bold text-[10px] uppercase text-rose-600">Ausculta Cardíaca:</label>
@@ -1646,9 +1613,9 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
           {/* TGI / NUTRIÇÃO */}
           <div className="bg-amber-50 border-l-4 border-amber-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid">
-            <h4 className="font-bold text-amber-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-amber-200 pb-2"><Utensils size={16} aria-hidden="true"/> TGI / Nutrição</h4>
+            <h4 className="font-bold text-amber-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-amber-200 pb-2"><Utensils size={16} aria-hidden="true" /> TGI / Nutrição</h4>
             <div className="space-y-4 text-sm text-amber-900">
-              
+
               <div className="flex flex-col gap-4 bg-white p-4 rounded-xl border border-amber-100 shadow-sm">
                 <div className="flex flex-wrap items-center gap-y-3 gap-x-6 border-b border-amber-50 pb-3">
                   <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
@@ -1670,7 +1637,7 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                     {data.tgi.viaDieta && data.tgi.viaDieta !== 'Via oral' && data.tgi.viaDieta !== 'Jejum' && (
                       <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md ml-auto sm:ml-0">
                         <span className="text-[10px] font-bold text-amber-700 uppercase">Vazão:</span>
-                        <InlineInput val={data.tgi.vazaoDieta} path="tgi.vazaoDieta" w="w-12" ph="ml/h" updateField={updateField} type="number" ariaLabel="Vazão da dieta"/>
+                        <InlineInput val={data.tgi.vazaoDieta} path="tgi.vazaoDieta" w="w-12" ph="ml/h" updateField={updateField} type="number" ariaLabel="Vazão da dieta" />
                         <span className="text-[10px] font-bold text-amber-600" aria-hidden="true">ml/h</span>
                       </div>
                     )}
@@ -1693,18 +1660,18 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
                 <div className="flex flex-wrap items-center gap-y-3 gap-x-6">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-[10px] uppercase text-amber-700">Bilirrubina:</span> 
-                    <InlineInput val={data.tgi.bb} path="tgi.bb" w="w-12" updateField={updateField} type="text" ariaLabel="Bilirrubina Total"/>
+                    <span className="font-bold text-[10px] uppercase text-amber-700">Bilirrubina:</span>
+                    <InlineInput val={data.tgi.bb} path="tgi.bb" w="w-12" updateField={updateField} type="text" ariaLabel="Bilirrubina Total" />
                   </div>
-                  
+
                   <div className="hidden sm:block w-px h-8 bg-amber-100"></div>
 
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs uppercase text-amber-800">DX:</span> 
-                    <InlineInput val={data.tgi.dx} path="tgi.dx" w="w-12" updateField={updateField} type="text" ariaLabel="Dextrostris / Glicemia"/> <span className="font-bold text-xs text-amber-600" aria-hidden="true">mg/dL</span> 
+                    <span className="font-bold text-xs uppercase text-amber-800">DX:</span>
+                    <InlineInput val={data.tgi.dx} path="tgi.dx" w="w-12" updateField={updateField} type="text" ariaLabel="Dextrostris / Glicemia" /> <span className="font-bold text-xs text-amber-600" aria-hidden="true">mg/dL</span>
                     {isHigh(data.tgi.dx, '', 180) && (
                       <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded ml-1 animate-in fade-in" aria-label="Alerta de Hiperglicemia">
-                        <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>( <InlineInput val={data.tgi.dxX180} path="tgi.dxX180" w="w-6" updateField={updateField} type="number" ariaLabel="Vezes dextrostris maior que 180"/> x {'>'} 180 )
+                        <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />( <InlineInput val={data.tgi.dxX180} path="tgi.dxX180" w="w-6" updateField={updateField} type="number" ariaLabel="Vezes dextrostris maior que 180" /> x {'>'} 180 )
                       </span>
                     )}
                   </div>
@@ -1721,7 +1688,7 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
                     {data.tgi.evacuou === 'Sim' && (
                       <div className="flex flex-wrap items-center gap-2 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md ml-2">
-                        <InlineInput val={data.tgi.evacuacoesNum} path="tgi.evacuacoesNum" w="w-6" ph="Nº" updateField={updateField} type="number" ariaLabel="Número de evacuações"/>
+                        <InlineInput val={data.tgi.evacuacoesNum} path="tgi.evacuacoesNum" w="w-6" ph="Nº" updateField={updateField} type="number" ariaLabel="Número de evacuações" />
                         <span className="text-[10px] font-bold text-amber-600" aria-hidden="true">x</span>
                         <div className="w-px h-3 bg-amber-300 mx-1"></div>
                         <input type="text" className="w-20 sm:w-28 border-b border-amber-300 focus:border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/30 rounded px-1 bg-transparent text-xs font-medium dark-input" placeholder="Ex: Pastosa" aria-label="Aspecto das fezes" value={data.tgi.evacuacoesAspecto || ''} onChange={(e) => updateField('tgi.evacuacoesAspecto', e.target.value)} />
@@ -1731,7 +1698,7 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                     {data.tgi.evacuou === 'Não' && (
                       <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md ml-2">
                         <span className="text-[10px] font-bold text-amber-700 uppercase">Data últ:</span>
-                        <InlineInput val={data.tgi.evacuacoesDataUltima} path="tgi.evacuacoesDataUltima" w="w-14" ph="dd/mm" updateField={updateField} ariaLabel="Data da última evacuação"/>
+                        <InlineInput val={data.tgi.evacuacoesDataUltima} path="tgi.evacuacoesDataUltima" w="w-14" ph="dd/mm" updateField={updateField} ariaLabel="Data da última evacuação" />
                       </div>
                     )}
                   </div>
@@ -1749,32 +1716,32 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
           {/* RENAL / METABÓLICO */}
           <div className="bg-lime-50 border-l-4 border-lime-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid">
-            <h4 className="font-bold text-lime-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-lime-200 pb-2"><Beaker size={16} aria-hidden="true"/> Renal / Metabólico</h4>
+            <h4 className="font-bold text-lime-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-lime-200 pb-2"><Beaker size={16} aria-hidden="true" /> Renal / Metabólico</h4>
             <div className="space-y-4 text-sm text-lime-900">
-              
+
               <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-xl border border-lime-100 shadow-sm">
                 <div className="flex flex-col gap-3 justify-center min-w-[110px]">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold w-6 text-right text-xs uppercase text-lime-800">Ur:</span> 
-                    <InlineInput val={data.renal.ur1} path="renal.ur1" w="w-10" updateField={updateField} ariaLabel="Ureia recente"/> {'>'} <InlineInput val={data.renal.ur2} path="renal.ur2" w="w-10" updateField={updateField} ariaLabel="Ureia prévia 1"/> {'>'} <InlineInput val={data.renal.ur3} path="renal.ur3" w="w-10" updateField={updateField} ariaLabel="Ureia prévia 2"/>
+                    <span className="font-bold w-6 text-right text-xs uppercase text-lime-800">Ur:</span>
+                    <InlineInput val={data.renal.ur1} path="renal.ur1" w="w-10" updateField={updateField} ariaLabel="Ureia recente" /> {'>'} <InlineInput val={data.renal.ur2} path="renal.ur2" w="w-10" updateField={updateField} ariaLabel="Ureia prévia 1" /> {'>'} <InlineInput val={data.renal.ur3} path="renal.ur3" w="w-10" updateField={updateField} ariaLabel="Ureia prévia 2" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold w-6 text-right text-xs uppercase text-lime-800">CR:</span> 
-                    <InlineInput val={data.renal.cr1} path="renal.cr1" w="w-10" updateField={updateField} ariaLabel="Creatinina recente"/> {'>'} <InlineInput val={data.renal.cr2} path="renal.cr2" w="w-10" updateField={updateField} ariaLabel="Creatinina prévia 1"/> {'>'} <InlineInput val={data.renal.cr3} path="renal.cr3" w="w-10" updateField={updateField} ariaLabel="Creatinina prévia 2"/>
+                    <span className="font-bold w-6 text-right text-xs uppercase text-lime-800">CR:</span>
+                    <InlineInput val={data.renal.cr1} path="renal.cr1" w="w-10" updateField={updateField} ariaLabel="Creatinina recente" /> {'>'} <InlineInput val={data.renal.cr2} path="renal.cr2" w="w-10" updateField={updateField} ariaLabel="Creatinina prévia 1" /> {'>'} <InlineInput val={data.renal.cr3} path="renal.cr3" w="w-10" updateField={updateField} ariaLabel="Creatinina prévia 2" />
                   </div>
                 </div>
-                
+
                 <div className="hidden sm:block w-px bg-lime-100"></div>
                 <div className="sm:hidden h-px w-full bg-lime-100"></div>
-                
+
                 <div className="grid grid-cols-2 gap-x-4 gap-y-3 flex-1 items-center">
-                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">Mg</span><InlineInput val={data.renal.mg} path="renal.mg" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Magnésio"/></div>
-                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">Na</span><InlineInput val={data.renal.na} path="renal.na" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Sódio"/></div>
-                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">Cai</span><InlineInput val={data.renal.cai} path="renal.cai" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Cálcio Iônico"/></div>
-                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">K</span><InlineInput val={data.renal.k} path="renal.k" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Potássio"/></div>
+                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">Mg</span><InlineInput val={data.renal.mg} path="renal.mg" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Magnésio" /></div>
+                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">Na</span><InlineInput val={data.renal.na} path="renal.na" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Sódio" /></div>
+                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">Cai</span><InlineInput val={data.renal.cai} path="renal.cai" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Cálcio Iônico" /></div>
+                  <div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase text-lime-600 w-5">K</span><InlineInput val={data.renal.k} path="renal.k" w="w-full max-w-[60px]" updateField={updateField} ariaLabel="Potássio" /></div>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-x-3 gap-y-3 bg-white p-3 rounded-xl border border-lime-100 shadow-sm">
                 <div className="flex items-center gap-2 flex-wrap">
                   <label htmlFor="renal-diurese-tipo" className="font-bold text-[10px] uppercase text-lime-600">Diurese:</label>
@@ -1784,11 +1751,11 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                     <option value="SVD">SVD</option>
                     <option value="TRS">TRS</option>
                   </select>
-                  
+
                   <div className="flex items-center bg-lime-50 border border-lime-200 px-2 py-1 rounded-md">
-                    <InlineInput val={data.renal.diureseHoras} path="renal.diureseHoras" w="w-6" updateField={updateField} type="number" ariaLabel="Horas de diurese recolhida"/>
+                    <InlineInput val={data.renal.diureseHoras} path="renal.diureseHoras" w="w-6" updateField={updateField} type="number" ariaLabel="Horas de diurese recolhida" />
                     <span className="text-[10px] text-lime-600 font-bold mr-2" aria-hidden="true">h:</span>
-                    <input type="text" className="w-16 border-b-2 border-lime-300 focus:border-lime-600 focus:outline-none focus:ring-2 focus:ring-lime-500/50 rounded px-1 text-center bg-transparent font-black text-[15px] text-lime-900 dark-input" value={data.renal.diurese || ''} onChange={(e) => updateField('renal.diurese', e.target.value)} aria-label="Volume de diurese em ml" /> 
+                    <input type="text" className="w-16 border-b-2 border-lime-300 focus:border-lime-600 focus:outline-none focus:ring-2 focus:ring-lime-500/50 rounded px-1 text-center bg-transparent font-black text-[15px] text-lime-900 dark-input" value={data.renal.diurese || ''} onChange={(e) => updateField('renal.diurese', e.target.value)} aria-label="Volume de diurese em ml" />
                     <span className="text-[10px] text-lime-600 font-bold ml-1" aria-hidden="true">ml</span>
                   </div>
                 </div>
@@ -1796,13 +1763,13 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                 <div className="hidden sm:block w-px h-6 bg-lime-200"></div>
 
                 <div className="flex items-center gap-2 bg-lime-50 border border-lime-200 px-2 py-1.5 rounded-md">
-                  <span className="font-bold text-[10px] uppercase text-lime-600">Balanço H. (BH):</span> 
-                  <InlineInput val={data.renal.bh} path="renal.bh" w="w-14" updateField={updateField} type="text" ariaLabel="Balanço Hídrico em ml"/>
+                  <span className="font-bold text-[10px] uppercase text-lime-600">Balanço H. (BH):</span>
+                  <InlineInput val={data.renal.bh} path="renal.bh" w="w-14" updateField={updateField} type="text" ariaLabel="Balanço Hídrico em ml" />
                   <span className="text-[10px] font-bold text-lime-600" aria-hidden="true">ml</span>
                 </div>
 
                 <div className="w-full sm:w-auto bg-lime-600 px-3 py-1.5 rounded-lg flex items-center justify-center gap-2 sm:ml-auto shadow-sm" aria-label={`Taxa de Diurese Efetiva calculada: ${calcDiureseEfetiva(data.renal.diurese, data.peso, data.renal.diureseHoras)} ml por kg por hora`}>
-                  <span className="font-bold text-[10px] uppercase text-lime-100" aria-hidden="true">Ef:</span> 
+                  <span className="font-bold text-[10px] uppercase text-lime-100" aria-hidden="true">Ef:</span>
                   <span className="font-black text-white" aria-hidden="true">{calcDiureseEfetiva(data.renal.diurese, data.peso, data.renal.diureseHoras)}</span> <span className="text-[10px] font-bold text-lime-200" aria-hidden="true">ml/kg/h</span>
                 </div>
               </div>
@@ -1813,40 +1780,40 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
           {/* HEMATO */}
           <div className="bg-pink-50 border-l-4 border-pink-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid">
-            <h4 className="font-bold text-pink-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-pink-200 pb-2"><TestTube size={16} aria-hidden="true"/> Hemato</h4>
+            <h4 className="font-bold text-pink-800 uppercase tracking-widest text-sm flex items-center gap-2 mb-4 border-b border-pink-200 pb-2"><TestTube size={16} aria-hidden="true" /> Hemato</h4>
             <div className="space-y-4 text-sm text-pink-900">
               <div className="flex flex-wrap items-center justify-between sm:justify-start sm:gap-8 gap-y-3 bg-white p-4 rounded-xl border border-pink-100 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[10px] uppercase text-pink-600">Hb:</span> 
-                  <InlineInput val={data.hemato.hb1} path="hemato.hb1" w="w-12" updateField={updateField} type="text" ariaLabel="Hemoglobina"/>
+                  <span className="font-bold text-[10px] uppercase text-pink-600">Hb:</span>
+                  <InlineInput val={data.hemato.hb1} path="hemato.hb1" w="w-12" updateField={updateField} type="text" ariaLabel="Hemoglobina" />
                   <span className="text-[10px] font-bold text-pink-600" aria-hidden="true">g/dL</span>
                 </div>
                 <div className="hidden sm:block w-px h-6 bg-pink-100"></div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[10px] uppercase text-pink-600">HT:</span> 
-                  <InlineInput val={data.hemato.ht1} path="hemato.ht1" w="w-12" updateField={updateField} type="text" ariaLabel="Hematócrito"/>
+                  <span className="font-bold text-[10px] uppercase text-pink-600">HT:</span>
+                  <InlineInput val={data.hemato.ht1} path="hemato.ht1" w="w-12" updateField={updateField} type="text" ariaLabel="Hematócrito" />
                   <span className="text-[10px] font-bold text-pink-600" aria-hidden="true">%</span>
                 </div>
                 <div className="hidden sm:block w-px h-6 bg-pink-100"></div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[10px] uppercase text-pink-600">Plaq:</span> 
-                  <InlineInput val={data.hemato.plaq1} path="hemato.plaq1" w="w-16" updateField={updateField} type="text" ariaLabel="Plaquetas"/>
+                  <span className="font-bold text-[10px] uppercase text-pink-600">Plaq:</span>
+                  <InlineInput val={data.hemato.plaq1} path="hemato.plaq1" w="w-16" updateField={updateField} type="text" ariaLabel="Plaquetas" />
                 </div>
               </div>
-              
+
               <div className="flex flex-col gap-2 bg-white/50 p-3 rounded-xl border border-pink-100">
                 <span className="font-bold text-[10px] uppercase text-pink-800 mb-1 block">Profilaxias</span>
                 <div className="flex items-center gap-3 bg-white p-1.5 rounded-lg border border-pink-50 shadow-sm focus-within:ring-2 focus-within:ring-pink-500">
-                  <div className="bg-pink-100 p-1.5 rounded-md text-pink-600" aria-hidden="true"><ShieldAlert size={14}/></div>
+                  <div className="bg-pink-100 p-1.5 rounded-md text-pink-600" aria-hidden="true"><ShieldAlert size={14} /></div>
                   <select aria-label="Profilaxia TVP" className="flex-1 bg-transparent outline-none font-bold text-xs text-pink-900 dark-input" value={data.hemato.profilaxiaTvp || ''} onChange={(e) => updateField('hemato.profilaxiaTvp', e.target.value)}>
                     <option value="">TVP (Nenhuma selecionada)</option>
-                    <option value="Enoxaparina 40mg">Enoxaparina 40mg</option>    
+                    <option value="Enoxaparina 40mg">Enoxaparina 40mg</option>
                     <option value="Heparina SC 5000UI">Heparina SC 5000UI</option>
                     <option value="Compressão Mecânica">Compressão Mecânica</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-3 bg-white p-1.5 rounded-lg border border-pink-50 shadow-sm focus-within:ring-2 focus-within:ring-pink-500">
-                  <div className="bg-pink-100 p-1.5 rounded-md text-pink-600" aria-hidden="true"><Pill size={14}/></div>
+                  <div className="bg-pink-100 p-1.5 rounded-md text-pink-600" aria-hidden="true"><Pill size={14} /></div>
                   <select aria-label="Profilaxia de Úlcera" className="flex-1 bg-transparent outline-none font-bold text-xs text-pink-900 dark-input" value={data.hemato.profilaxiaUlcera || ''} onChange={(e) => updateField('hemato.profilaxiaUlcera', e.target.value)}>
                     <option value="">Úlcera (Nenhuma selecionada)</option>
                     <option value="Omeprazol 40mg">Omeprazol 40mg</option>
@@ -1862,45 +1829,45 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
           {/* INFECTO */}
           <div className="bg-teal-50 border-l-4 border-teal-500 rounded-r-xl p-4 shadow-sm print-break-inside-avoid">
             <div className="flex items-center justify-between mb-4 border-b border-teal-200 pb-2">
-              <h4 className="font-bold text-teal-800 uppercase tracking-widest text-sm flex items-center gap-2"><Bug size={16} aria-hidden="true"/> Infecto</h4>
+              <h4 className="font-bold text-teal-800 uppercase tracking-widest text-sm flex items-center gap-2"><Bug size={16} aria-hidden="true" /> Infecto</h4>
             </div>
 
             <div className="space-y-4 text-sm text-teal-900">
-              
+
               <div className="flex flex-wrap items-center justify-between sm:justify-start sm:gap-8 gap-y-3 bg-white p-4 rounded-xl border border-teal-100 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[10px] uppercase text-teal-600">Tax:</span> 
-                  <InlineInput val={data.infecto.tmax} path="infecto.tmax" w="w-12" updateField={updateField} type="text" ariaLabel="Temperatura Máxima"/> 
+                  <span className="font-bold text-[10px] uppercase text-teal-600">Tax:</span>
+                  <InlineInput val={data.infecto.tmax} path="infecto.tmax" w="w-12" updateField={updateField} type="text" ariaLabel="Temperatura Máxima" />
                   <span className="font-bold text-[10px] text-teal-600" aria-hidden="true">°C</span>
                   {isHigh(data.infecto.tmax, '', 38) && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded ml-2 animate-in fade-in" aria-label="Alerta de Febre">
-                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true"/>( <InlineInput val={data.infecto.tmaxX38} path="infecto.tmaxX38" w="w-6" updateField={updateField} type="number" ariaLabel="Vezes temperatura maior que 38"/> x {'>'} 38 )
+                      <AlertTriangle size={10} className="text-red-500" aria-hidden="true" />( <InlineInput val={data.infecto.tmaxX38} path="infecto.tmaxX38" w="w-6" updateField={updateField} type="number" ariaLabel="Vezes temperatura maior que 38" /> x {'>'} 38 )
                     </span>
                   )}
                 </div>
                 <div className="hidden sm:block w-px h-6 bg-teal-100"></div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[10px] uppercase text-teal-600">Leucócitos:</span> 
-                  <InlineInput val={data.infecto.leuco1} path="infecto.leuco1" w="w-16" updateField={updateField} type="text" ariaLabel="Contagem de Leucócitos"/>
+                  <span className="font-bold text-[10px] uppercase text-teal-600">Leucócitos:</span>
+                  <InlineInput val={data.infecto.leuco1} path="infecto.leuco1" w="w-16" updateField={updateField} type="text" ariaLabel="Contagem de Leucócitos" />
                   <span className="text-[10px] font-bold text-teal-600" aria-hidden="true">/µL</span>
                 </div>
               </div>
-              
+
               <Accordion title="Antibióticos & Culturas" icon={Microscope} count={(data.infecto.atbs || []).length + (data.infecto.culturas || []).length} isOpen={expandedSections.infecto} onToggle={() => toggleSection('infecto')} colorClass="teal">
                 <div className="mb-4 border-b border-teal-100 pb-4">
-                  <h5 className="text-[10px] font-bold text-teal-600 uppercase mb-3 flex items-center gap-1"><Activity size={12} aria-hidden="true"/> Antibioticoterapia Ativa</h5>
+                  <h5 className="text-[10px] font-bold text-teal-600 uppercase mb-3 flex items-center gap-1"><Activity size={12} aria-hidden="true" /> Antibioticoterapia Ativa</h5>
                   {(!data.infecto.atbs || data.infecto.atbs.length === 0) && <span className="text-xs text-slate-400 italic block mb-2">Nenhum ATB em uso.</span>}
-                  
+
                   {(data.infecto.atbs || []).map((atb, idx) => (
                     <div key={idx} className="bg-white p-3 rounded-xl border border-teal-100 relative shadow-sm mb-2">
-                      <button 
-                        onClick={() => removeAtb(idx)} 
+                      <button
+                        onClick={() => removeAtb(idx)}
                         aria-label={`Remover antibiótico ${atb.nome || 'sem nome'}`}
                         className="absolute top-3 right-3 text-red-300 hover:text-red-500 no-print transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
                       >
-                        <Trash2 size={14} aria-hidden="true"/>
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
-                      
+
                       <div className="flex flex-col sm:flex-row gap-3 pr-6">
                         <div className="flex flex-col gap-1 flex-[2] min-w-[140px]">
                           <label htmlFor={`atb-nome-${idx}`} className="text-[10px] font-bold text-teal-500 uppercase">Fármaco</label>
@@ -1924,7 +1891,7 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                           <label htmlFor={`atb-dose-${idx}`} className="text-[10px] font-bold text-teal-500 uppercase">Dose</label>
                           <input id={`atb-dose-${idx}`} type="text" className="w-full bg-teal-50 border border-teal-100 px-2 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs font-medium dark-input" placeholder="Ex: 1g 12/12h" value={atb.dose || ''} onChange={(e) => updateAtb(idx, 'dose', e.target.value)} />
                         </div>
-                        
+
                         <div className="flex flex-col gap-1 w-16 shrink-0">
                           <label htmlFor={`atb-dia-${idx}`} className="text-[10px] font-bold text-teal-500 uppercase text-center">Dia</label>
                           <div className="flex items-center justify-center bg-teal-50 border border-teal-100 px-1 py-1.5 rounded-md">
@@ -1935,37 +1902,37 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                       </div>
                     </div>
                   ))}
-                  
-                  <button 
-                    onClick={addAtb} 
+
+                  <button
+                    onClick={addAtb}
                     className="no-print w-full py-2 mt-2 flex items-center justify-center gap-2 text-teal-600 bg-teal-100/50 hover:bg-teal-100 border-2 border-teal-200 border-dashed rounded-xl text-xs font-bold transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-teal-500"
                   >
-                    <Plus size={14} aria-hidden="true"/> Adicionar ATB
+                    <Plus size={14} aria-hidden="true" /> Adicionar ATB
                   </button>
                 </div>
 
                 <div>
-                  <h5 className="text-[10px] font-bold text-teal-600 uppercase mb-3 flex items-center gap-1"><TestTube size={12} aria-hidden="true"/> Monitorização de Culturas</h5>
+                  <h5 className="text-[10px] font-bold text-teal-600 uppercase mb-3 flex items-center gap-1"><TestTube size={12} aria-hidden="true" /> Monitorização de Culturas</h5>
                   {(!data.infecto.culturas || data.infecto.culturas.length === 0) && <span className="text-xs text-slate-400 italic block mb-2">Nenhuma cultura registada.</span>}
 
                   {(data.infecto.culturas || []).map((cult, idx) => (
                     <div key={idx} className="bg-white p-3 rounded-xl border border-teal-100 relative shadow-sm mb-2">
-                      <button 
-                        onClick={() => removeCultura(idx)} 
+                      <button
+                        onClick={() => removeCultura(idx)}
                         aria-label={`Remover cultura tipo ${cult.tipo || 'sem tipo'}`}
                         className="absolute top-3 right-3 text-red-300 hover:text-red-500 no-print transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
                       >
-                        <Trash2 size={14} aria-hidden="true"/>
+                        <Trash2 size={14} aria-hidden="true" />
                       </button>
-                      
+
                       <div className="flex flex-wrap items-center gap-3 pr-6">
                         <input type="text" aria-label="Tipo de Cultura" className="w-16 sm:w-20 border-b-2 border-teal-200 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded px-1 bg-transparent text-sm font-bold uppercase text-teal-900 dark-input" placeholder="Tipo" value={cult.tipo || ''} onChange={(e) => updateCultura(idx, 'tipo', e.target.value)} />
-                        
+
                         <div className="flex items-center gap-1 bg-teal-50 px-2 py-1 rounded-md border border-teal-100">
                           <label htmlFor={`cult-data-${idx}`} className="text-[10px] font-bold text-teal-600">Data:</label>
                           <input id={`cult-data-${idx}`} type="text" className="w-14 border-b border-teal-300 focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500/30 rounded px-1 bg-transparent text-xs text-center font-medium dark-input" placeholder="dd/mm" value={cult.data || ''} onChange={(e) => updateCultura(idx, 'data', e.target.value)} />
                         </div>
-                        
+
                         <select aria-label="Status da cultura" className="flex-1 min-w-[130px] bg-teal-50 border border-teal-200 p-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 text-xs font-bold text-teal-900 dark-input" value={cult.status || ''} onChange={(e) => updateCultura(idx, 'status', e.target.value)}>
                           <option value="">Status da Cultura...</option>
                           <option value="Em andamento">Em andamento</option>
@@ -1978,22 +1945,22 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
                       {(cult.status === 'Parcial positiva' || cult.status === 'Positiva') && (
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-yellow-50 p-2.5 rounded-lg border border-yellow-200 mt-3 animate-in fade-in">
-                          <label htmlFor={`cult-det-${idx}`} className="text-[10px] font-bold text-yellow-800 uppercase shrink-0 flex items-center gap-1"><AlertTriangle size={12} className="text-yellow-600" aria-hidden="true"/>Isolamento:</label>
+                          <label htmlFor={`cult-det-${idx}`} className="text-[10px] font-bold text-yellow-800 uppercase shrink-0 flex items-center gap-1"><AlertTriangle size={12} className="text-yellow-600" aria-hidden="true" />Isolamento:</label>
                           <input id={`cult-det-${idx}`} type="text" className="flex-1 bg-transparent border-b border-yellow-300 focus:border-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500/30 rounded px-1 text-xs text-yellow-900 font-medium w-full dark-input" placeholder="Ex: E. coli ESBL / Antibiograma em curso..." value={cult.detalhe || ''} onChange={(e) => updateCultura(idx, 'detalhe', e.target.value)} />
                         </div>
                       )}
                     </div>
                   ))}
 
-                  <button 
-                    onClick={addCultura} 
+                  <button
+                    onClick={addCultura}
                     className="no-print w-full py-2 mt-2 flex items-center justify-center gap-2 text-teal-600 bg-teal-100/50 hover:bg-teal-100 border-2 border-teal-200 border-dashed rounded-xl text-xs font-bold transition-all hover:scale-[1.01] focus:outline-none focus:ring-2 focus:ring-teal-500"
                   >
-                    <Plus size={14} aria-hidden="true"/> Adicionar Cultura
+                    <Plus size={14} aria-hidden="true" /> Adicionar Cultura
                   </button>
                 </div>
               </Accordion>
-              
+
               <NotasField sistemaNome="Infecciologia" notasValue={data.infecto.notas} showNotas={showNotas.infecto} onToggle={() => toggleNotas('infecto')} onUpdate={(val) => updateField('infecto.notas', val)} />
             </div>
           </div>
@@ -2002,51 +1969,51 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
         {/* SESSÕES DE TEXTO LIVRE */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mt-4 sm:mt-8 p-3 sm:p-6 pt-0 sm:pt-0 bg-slate-50 print:bg-white">
-          
+
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm print-break-inside-avoid">
-            <h4 className="font-bold text-red-600 uppercase tracking-widest text-sm flex items-center gap-2 mb-3 border-b border-red-100 pb-2"><AlertCircle size={16} aria-hidden="true"/> Problemas Ativos</h4>
+            <h4 className="font-bold text-red-600 uppercase tracking-widest text-sm flex items-center gap-2 mb-3 border-b border-red-100 pb-2"><AlertCircle size={16} aria-hidden="true" /> Problemas Ativos</h4>
             <div className="space-y-2">
               {(data.impressao || ['', '', '', '']).map((linha, i) => (
                 <div key={`imp-${i}`} className="flex items-center gap-2">
-                  <span className="text-slate-300 font-bold" aria-hidden="true">{i+1}.</span>
-                  <input type="text" aria-label={`Problema ativo ${i+1}`} className="flex-1 bg-slate-50 border-b border-slate-200 focus:border-red-400 focus:bg-red-50/30 focus:outline-none focus:ring-2 focus:ring-red-400/30 py-1 px-2 rounded transition-colors text-sm font-medium print:bg-transparent print:border-none dark-input" value={linha || ''} onChange={(e) => updateArrayField('impressao', i, e.target.value)} />
+                  <span className="text-slate-300 font-bold" aria-hidden="true">{i + 1}.</span>
+                  <input type="text" aria-label={`Problema ativo ${i + 1}`} className="flex-1 bg-slate-50 border-b border-slate-200 focus:border-red-400 focus:bg-red-50/30 focus:outline-none focus:ring-2 focus:ring-red-400/30 py-1 px-2 rounded transition-colors text-sm font-medium print:bg-transparent print:border-none dark-input" value={linha || ''} onChange={(e) => updateArrayField('impressao', i, e.target.value)} />
                 </div>
               ))}
             </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm print-break-inside-avoid">
-            <h4 className="font-bold text-emerald-600 uppercase tracking-widest text-sm flex items-center gap-2 mb-3 border-b border-emerald-100 pb-2"><ListChecks size={16} aria-hidden="true"/> Plano 12-24h</h4>
+            <h4 className="font-bold text-emerald-600 uppercase tracking-widest text-sm flex items-center gap-2 mb-3 border-b border-emerald-100 pb-2"><ListChecks size={16} aria-hidden="true" /> Plano 12-24h</h4>
             <div className="space-y-2">
               {(data.conduta || ['', '', '', '']).map((linha, i) => (
                 <div key={`cond-${i}`} className="flex items-center gap-2">
-                  <span className="text-slate-300 font-bold" aria-hidden="true">{i+1}.</span>
-                  <input type="text" aria-label={`Passo do plano ${i+1}`} className="flex-1 bg-slate-50 border-b border-slate-200 focus:border-emerald-400 focus:bg-emerald-50/30 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 py-1 px-2 rounded transition-colors text-sm font-medium print:bg-transparent print:border-none dark-input" value={linha || ''} onChange={(e) => updateArrayField('conduta', i, e.target.value)} />
+                  <span className="text-slate-300 font-bold" aria-hidden="true">{i + 1}.</span>
+                  <input type="text" aria-label={`Passo do plano ${i + 1}`} className="flex-1 bg-slate-50 border-b border-slate-200 focus:border-emerald-400 focus:bg-emerald-50/30 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 py-1 px-2 rounded transition-colors text-sm font-medium print:bg-transparent print:border-none dark-input" value={linha || ''} onChange={(e) => updateArrayField('conduta', i, e.target.value)} />
                 </div>
               ))}
             </div>
           </div>
 
           <div className="bg-orange-50/50 border border-orange-200 rounded-xl p-4 shadow-sm md:col-span-2 print-break-inside-avoid">
-            <h4 className="font-bold text-orange-600 uppercase tracking-widest text-sm flex items-center gap-2 mb-3 border-b border-orange-200 pb-2"><ClipboardList size={16} aria-hidden="true"/> Pendências / Riscos e contingências</h4>
+            <h4 className="font-bold text-orange-600 uppercase tracking-widest text-sm flex items-center gap-2 mb-3 border-b border-orange-200 pb-2"><ClipboardList size={16} aria-hidden="true" /> Pendências / Riscos e contingências</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
               {(data.pendencias || []).map((pend, i) => (
                 <div key={`pend-${i}`} className="flex items-center gap-3 bg-white p-2 rounded-lg border border-orange-100 shadow-sm print:shadow-none print:border-none focus-within:ring-2 focus-within:ring-orange-500">
-                  <input 
+                  <input
                     id={`pend-check-${i}`}
-                    type="checkbox" 
-                    aria-label={`Marcar pendência ${i+1} como concluída`}
-                    className="w-5 h-5 text-orange-500 rounded cursor-pointer accent-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500" 
-                    checked={pend.checked || false} 
-                    onChange={(e) => updateArrayField('pendencias', i, e.target.checked, 'checked')} 
+                    type="checkbox"
+                    aria-label={`Marcar pendência ${i + 1} como concluída`}
+                    className="w-5 h-5 text-orange-500 rounded cursor-pointer accent-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    checked={pend.checked || false}
+                    onChange={(e) => updateArrayField('pendencias', i, e.target.checked, 'checked')}
                   />
-                  <input 
-                    type="text" 
-                    aria-label={`Descrição da pendência ${i+1}`}
-                    className="flex-1 bg-transparent border-b border-orange-200 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/30 rounded px-1 text-sm font-medium text-orange-900 placeholder:text-orange-300 print:border-none dark-input" 
-                    value={pend.text || ''} 
-                    onChange={(e) => updateArrayField('pendencias', i, e.target.value, 'text')} 
-                    placeholder={`Descreva a pendência...`} 
+                  <input
+                    type="text"
+                    aria-label={`Descrição da pendência ${i + 1}`}
+                    className="flex-1 bg-transparent border-b border-orange-200 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/30 rounded px-1 text-sm font-medium text-orange-900 placeholder:text-orange-300 print:border-none dark-input"
+                    value={pend.text || ''}
+                    onChange={(e) => updateArrayField('pendencias', i, e.target.value, 'text')}
+                    placeholder={`Descreva a pendência...`}
                   />
                 </div>
               ))}
