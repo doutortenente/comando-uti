@@ -32,9 +32,6 @@ export interface UseSupabasePatientsReturn {
 
   // SOFA Trend (timeseries 72h)
   getSofaTrend: (pacienteId: string) => Promise<{ ts: string; sofa_total: number }[]>;
-
-  // Migração Firebase
-  importFromFirebase: (firebasePatients: unknown[]) => Promise<{ ok: number; err: number }>;
 }
 
 // ============================================================================
@@ -257,97 +254,6 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
     []
   );
 
-  // ============================================================
-  // MIGRAÇÃO FIREBASE → SUPABASE
-  // Converte o formato antigo do Firebase para o novo schema
-  // ============================================================
-  const importFromFirebase = useCallback(
-    async (firebasePatients: unknown[]): Promise<{ ok: number; err: number }> => {
-      let ok = 0;
-      let err = 0;
-
-      for (const raw of firebasePatients) {
-        const fp = raw as Record<string, unknown>;
-        
-        try {
-          // 1. Criar paciente no novo formato
-          const { data: novoPaciente, error: errPac } = await supabase
-            .from('pacientes')
-            .insert({
-              leito: (fp.leito as string) ?? 'Leito ?',
-              uti: (fp.uti as string) ?? 'UTI-1',
-              nome: (fp.nome as string) ?? 'Paciente Migrado',
-              idade: fp.idade ? Number(fp.idade) : undefined,
-              peso: fp.peso ? parseFloat(fp.peso as string) : undefined,
-              altura: fp.altura ? parseFloat(fp.altura as string) : undefined,
-              hd: (fp.hd as string) ?? undefined,
-              data_adm: (fp.adm as string) ?? new Date().toISOString().split('T')[0],
-              alergias: (fp.alergias as string) ?? undefined,
-              gravidade: 'grave',
-              status_leito: 'ativo',
-            })
-            .select()
-            .single();
-
-          if (errPac || !novoPaciente) {
-            console.error('[MIGRAÇÃO] Erro ao criar paciente:', errPac);
-            err++;
-            continue;
-          }
-
-          // 2. Criar evolução com dados dos sistemas (formato JSONB)
-          const sistemas = {
-            neuro: (fp.neuro as Record<string, unknown>) ?? {},
-            resp: (fp.resp as Record<string, unknown>) ?? {},
-            hemo: (fp.hemo as Record<string, unknown>) ?? {},
-            tgi: (fp.tgi as Record<string, unknown>) ?? {},
-            renal: (fp.renal as Record<string, unknown>) ?? {},
-            hemato: (fp.hemato as Record<string, unknown>) ?? {},
-            infecto: (fp.infecto as Record<string, unknown>) ?? {},
-          };
-
-          const { error: errEv } = await supabase.from('evolucoes').insert({
-            paciente_id: novoPaciente.id,
-            plantao: 'manha',
-            ...sistemas,
-            dvas: (fp.dvas as unknown[]) ?? [],
-            sedativos: (fp.sedativos as unknown[]) ?? [],
-            impressao: (fp.impressao as string[]) ?? [],
-            conduta: (fp.conduta as string[]) ?? [],
-            sofa_snapshot: {},
-          });
-
-          if (errEv) {
-            console.error('[MIGRAÇÃO] Erro ao criar evolução:', errEv);
-            // Paciente foi criado, evolução falhou — aceitável, continua
-          }
-
-          // 3. Migrar pendências
-          const pendencias = (fp.pendencias as unknown[]) ?? [];
-          for (const p of pendencias) {
-            const pend = p as Record<string, unknown>;
-            await supabase.from('pendencias').insert({
-              paciente_id: novoPaciente.id,
-              tarefa: (pend.tarefa as string) ?? (pend.text as string) ?? 'Pendência migrada',
-              prioridade: 2,
-              concluida: Boolean(pend.concluida ?? pend.done ?? false),
-            });
-          }
-
-          ok++;
-          console.log(`[MIGRAÇÃO] ✅ ${novoPaciente.nome} (leito ${novoPaciente.leito}) migrado`);
-        } catch (e) {
-          console.error('[MIGRAÇÃO] Exceção:', e);
-          err++;
-        }
-      }
-
-      console.log(`[MIGRAÇÃO] Concluída — OK: ${ok} | ERR: ${err}`);
-      return { ok, err };
-    },
-    []
-  );
-
   return {
     patients,
     dashboard,
@@ -360,6 +266,5 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
     getEvolucoes,
     getLastEvolucao,
     getSofaTrend,
-    importFromFirebase,
   };
 }
