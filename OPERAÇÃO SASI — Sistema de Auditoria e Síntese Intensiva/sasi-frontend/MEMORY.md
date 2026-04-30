@@ -2,7 +2,43 @@
 
 > **Pra quem chega depois (chat / cowork / aqui):** este é o estado real do projeto.
 > README.md = arquitetura conceitual. Este arquivo = o que está deployado, configurado, e em qual estado.
-> Atualize aqui sempre que tomar uma decisão importante ou consertar algo grande.
+> **Atualize este arquivo SEMPRE que tomar uma decisão importante.** É a regra #1 de sync.
+
+---
+
+## 📜 Regra #1 — Sincronização multi-Claude (LEIA ANTES DE QUALQUER COISA)
+
+**Git é a única fonte de verdade.** Há mais de uma sessão Claude (chat / cowork / Claude Code aqui) trabalhando neste repo simultaneamente. Sem disciplina, fragmenta de novo.
+
+### Antes de qualquer mudança importante
+
+```bash
+cd "C:/Users/Usuario/comando-uti"
+git pull origin main      # pega o que outro Claude já mudou
+cat ".../sasi-frontend/MEMORY.md"   # lê o estado atual
+```
+
+### Depois de qualquer mudança importante
+
+1. **Atualize ESTE arquivo** com a decisão (motivo + data + impacto)
+2. Adicione linha em "Histórico de decisões"
+3. `git add -A && git commit -m "..." && git push`
+
+### O que conta como "mudança importante"
+
+- Deploy / build config (Netlify, env vars, CI)
+- Schema do banco (tabelas, views, RLS, triggers)
+- Auth flow (URL allowlist, MFA, providers)
+- Decisão arquitetural (Realtime vs polling, Vite vs outro, etc.)
+- Renomeação ou movimentação de arquivos importantes
+- Adição/remoção de dependências
+- Qualquer coisa que vai surpreender a próxima sessão
+
+### O que NÃO precisa entrar aqui
+
+- Refator interno de um componente (commit explica)
+- Bug fix pontual (commit explica)
+- Tweak de estilo CSS
 
 ---
 
@@ -23,10 +59,11 @@
 | **Supabase** | `https://idswehsvvqczzkiatuzu.supabase.co` |
 | **Repo GitHub** | `https://github.com/doutortenente/comando-uti` |
 | **Netlify project** | `passometro-uti` |
+| **Netlify env vars** | `https://app.netlify.com/projects/passometro-uti/configuration/env` |
 
 ---
 
-## 🔐 Auth — magic link (já funciona end-to-end)
+## 🔐 Auth — magic link (operacional)
 
 Configuração no **Supabase Dashboard → Authentication → URL Configuration**:
 
@@ -37,18 +74,23 @@ Configuração no **Supabase Dashboard → Authentication → URL Configuration*
 
 ⚠️ **Não adicione `nagaitaltda.com` na allowlist** — é Squarespace vazio, redireciona pra página em branco.
 
+⚠️ **Pendente: MFA TOTP** — magic link sozinho é frágil pra app médico (LGPD art. 46). Prioridade Fase B.
+
 ---
 
-## 🔑 Variáveis (`.env`)
+## 🔑 Variáveis (`.env` local + Netlify env vars)
 
+### `.env` local (gitignored)
 ```
 VITE_SUPABASE_URL=https://idswehsvvqczzkiatuzu.supabase.co
-VITE_SUPABASE_ANON_KEY=<JWT legacy anon key — NÃO publishable>
+VITE_SUPABASE_ANON_KEY=<JWT legacy anon key — começa com "eyJhbGc...">
 ```
 
-**Importante:** usamos a **anon key JWT legacy** (header `eyJhbGc...`), **não** o `sb_publishable_*`. Motivo: SDK `@supabase/supabase-js@2.45.0` não reconhece publishable keys. Pegue em **Supabase Dashboard → Settings → API → JWT (legacy keys)**.
+### Netlify Environment Variables (configurar via Dashboard)
+- `VITE_SUPABASE_URL` (não-secret, scope: builds + runtime)
+- `VITE_SUPABASE_ANON_KEY` (secret OK, scope: builds + runtime)
 
-`.env` é git-ignored. `.env.example` está em git pra referência (mas com placeholder).
+**Importante:** usamos a **anon key JWT legacy**, **não** o `sb_publishable_*`. Motivo: SDK `@supabase/supabase-js@2.45.0` não reconhece publishable keys. Pegue em **Supabase Dashboard → Settings → API → JWT (legacy keys)**.
 
 ---
 
@@ -65,11 +107,9 @@ VITE_SUPABASE_ANON_KEY=<JWT legacy anon key — NÃO publishable>
   NODE_VERSION = "20"
 ```
 
-Pré-requisitos no Netlify Dashboard → Site Settings → Environment Variables:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+Cada `git push origin main` → Netlify builda automaticamente → deploy em prod.
 
-**Histórico:** antes usávamos `command = ""` + deploy de `dist/` pré-buildado local via `@netlify/mcp`. Funcionou como workaround quando CI quebrava (exit code 2 sem logs visíveis), mas causava **fragmentação multi-Claude**: cada sessão tinha um `dist/` diferente, e quem buildou por último vencia. Voltamos pro CI agora que `package-lock.json` está consistente (`npm ci --dry-run` passa).
+⚠️ **Gotcha que pegou a gente:** se você setar env vars NOVAS e fizer "Trigger deploy" sem "Clear build cache and deploy site", Netlify reaproveita o bundle anterior. Pra forçar rebuild com env vars novas: **Trigger deploy → "Clear build cache and deploy site"**.
 
 `dist/` está em `.gitignore` raiz — **nunca commitar**.
 
@@ -108,7 +148,7 @@ Pra resetar: `DELETE FROM pacientes WHERE user_id = '<uid>'` (CASCADE limpa evol
 
 ## 🔧 Edge Function
 
-`supabase/functions/ocr-ingest/index.ts` — já deployada. `verify_jwt: true`.
+`supabase/functions/ocr-ingest/index.ts` — já deployada. `verify_jwt: true`. Audit log compulsório em todos os paths (sucesso e erro).
 
 Skill complementar: `anthropic-skills:sasi-ingest-export` (extrai dados de fotos de folhas de enfermagem → POST aqui).
 
@@ -125,39 +165,50 @@ Skill complementar: `anthropic-skills:sasi-ingest-export` (extrai dados de fotos
 | 29-Abr | Trocou publishable key → JWT legacy | Incompatibilidade SDK 2.45 |
 | 29-Abr | `PatientModal.tsx` criado (cowork) | Cards precisavam abrir detalhe |
 | 29-Abr | Test data inserido com UID correto | Cards apareceram |
-| 30-Abr | Sync git (este commit) + CI build restaurado | Eliminar fragmentação multi-sessão |
+| 30-Abr | **Sync git inicial** + CI build restaurado | Eliminar fragmentação multi-sessão |
+| 30-Abr | Repo GitHub conectado ao Netlify | Auto-deploy em cada push |
+| 30-Abr | env vars `VITE_*` configuradas no Netlify | Bundle estava sendo buildado sem creds → tela preta |
+| 30-Abr | **Fase A faxina:** removido `G_Goggins_pós_Claude_*/` (backup duplicado), `MANIFESTO_SASI_26Abr2026.md` movido pra `docs/archive/`, `importFromFirebase` removido como dead code, `.env.example` corrigido | Limpeza pós-review |
+| 30-Abr | **Fase D governança:** PR template adicionado em `.github/`, regra #1 de sync formalizada | Disciplina multi-Claude |
 
 ---
 
-## ⚠️ Pendências / problemas conhecidos
+## ⚠️ Pendências / próxima fase
 
-- [ ] **Confirmar** que cards abrem o `PatientModal` em produção após deploy via CI
+### Fase B — Hardening crítico (1–2 dias)
+- [ ] Error boundary global em `App.tsx`
+- [ ] MFA TOTP no Supabase Auth + UI no Login
+- [ ] `tsconfig` strict (`noUnusedLocals: true`)
+- [ ] Wrapping de `vw_dashboard_uti` com fallback
+- [ ] Trigger pg pra `pacientes.updated_at` (resolve race condition do `saveEvolucao`)
+
+### Fase C — Qualidade médio prazo (1 semana)
+- [ ] Sentry pra error tracking
+- [ ] 1 e2e Playwright (login → dashboard)
+- [ ] Logger estruturado substituindo console.log
+- [ ] Renomear path do projeto pra `sasi/` simples (PR único, breaking change)
+- [ ] ChunkSplitting + lazy loading de PatientModal
 - [ ] Modal "Novo Leito" no frontend (admissão manual sem skill)
 - [ ] Drawer com timeline SOFA + eventos
 - [ ] Export "Passagem de Turno" PDF
-- [ ] Trigger pg pra auto-cálculo SOFA server-side
-- [ ] MFA na conta Supabase (Dashboard → Account → Security)
 
 ---
 
-## 🤝 Sincronização entre sessões Claude
+## 🛠️ MCP servers configurados (`.mcp.json`)
 
-**Regra:** git é a única fonte de verdade. Antes de mexer em algo:
+- `supabase` — HTTP transport, project `idswehsvvqczzkiatuzu`, todas as 8 features (storage, branching, development, functions, debugging, database, account, docs)
 
-```bash
-git pull origin main
-```
-
-Depois de mudar algo importante (deploy, schema, decisão arquitetural):
-
-```bash
-# Atualize MEMORY.md com a decisão
-git add -A && git commit -m "..." && git push
-```
-
-Se tem coisa que outro Claude precisa saber **rápido**, escreva aqui em MEMORY.md.
-Se é referência permanente (arquitetura, fluxos), vai pro README.md.
+Próximo Claude que abrir o repo pega automaticamente.
 
 ---
 
-**Última atualização:** 30-Abr-2026 · Stay hard. 🦅
+## 🎓 Skills locais (`.agents/skills/`)
+
+- `supabase` — best practices da SDK
+- `supabase-postgres-best-practices` — schema + RLS + performance
+
+Symlinkadas pro Claude Code via `.claude/skills/`.
+
+---
+
+**Última atualização:** 30-Abr-2026 (Fase A + D) · Stay hard. 🦅
