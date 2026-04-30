@@ -55,11 +55,11 @@ cat ".../sasi-frontend/MEMORY.md"   # lê o estado atual
 
 | Recurso | URL |
 |---|---|
-| **App em produção** | `https://passometro-uti.netlify.app` |
+| **App em produção** | `https://sasi-uti.netlify.app` |
 | **Supabase** | `https://idswehsvvqczzkiatuzu.supabase.co` |
 | **Repo GitHub** | `https://github.com/doutortenente/comando-uti` |
-| **Netlify project** | `passometro-uti` |
-| **Netlify env vars** | `https://app.netlify.com/projects/passometro-uti/configuration/env` |
+| **Netlify project** | `sasi-uti` |
+| **Netlify env vars** | `https://app.netlify.com/projects/sasi-uti/configuration/env` |
 
 ---
 
@@ -67,9 +67,9 @@ cat ".../sasi-frontend/MEMORY.md"   # lê o estado atual
 
 Configuração no **Supabase Dashboard → Authentication → URL Configuration**:
 
-- **Site URL:** `https://passometro-uti.netlify.app`
+- **Site URL:** `https://sasi-uti.netlify.app`
 - **Redirect URLs (allowlist):**
-  - `https://passometro-uti.netlify.app/**`
+  - `https://sasi-uti.netlify.app/**`
   - `http://localhost:5173/**` (dev)
 
 ⚠️ **Não adicione `nagaitaltda.com` na allowlist** — é Squarespace vazio, redireciona pra página em branco.
@@ -171,6 +171,7 @@ Skill complementar: `anthropic-skills:sasi-ingest-export` (extrai dados de fotos
 | 30-Abr | **Fase A faxina:** removido `G_Goggins_pós_Claude_*/` (backup duplicado), `MANIFESTO_SASI_26Abr2026.md` movido pra `docs/archive/`, `importFromFirebase` removido como dead code, `.env.example` corrigido | Limpeza pós-review |
 | 30-Abr | **Fase D governança:** PR template adicionado em `.github/`, regra #1 de sync formalizada | Disciplina multi-Claude |
 | 30-Abr | **Claude Design bundle implementado:** 3 temas (dark/clinical/light), 3 view modes (Plantão/Round/Editor), `lib/drugs.ts` com calculadora de DVA/sedação, `lib/theme.tsx` com `UIProvider`, novos componentes (`ThemeToggle`, `ViewSwitcher`, `MiniChart`, `InfusionEditor`, `CriticalAlerts`, `SplitView`, `TableView`), `PatientModal` reescrito com 3 abas, `LeitoCard` re-skinado com tokens `app-*`. Edit form ficou read-only por enquanto (escrita continua via edge function `/ocr-ingest` com audit log). | Implementação do bundle de design |
+| 30-Abr | **Site renomeado:** `passometro-uti.netlify.app` → `sasi-uti.netlify.app` (via Netlify dashboard). Site ID `fa44b706-6484-40f5-94fb-485e444ccbc2` permaneceu. ⚠️ Auth allowlist do Supabase precisa ser revista pra incluir o novo domínio. | Naming alinhado ao projeto SASI |
 
 ---
 
