@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabaseClient';
 import { UIProvider } from './lib/theme';
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
@@ -30,16 +31,18 @@ export default function App() {
   }, []);
 
   return (
-    <UIProvider>
-      {bootLoading ? (
-        <div className="min-h-screen flex items-center justify-center bg-app text-app-text-muted">
-          <div className="text-sm">Inicializando SASI…</div>
-        </div>
-      ) : !session ? (
-        <Login />
-      ) : (
-        <Dashboard session={session} />
-      )}
-    </UIProvider>
+    <ErrorBoundary>
+      <UIProvider>
+        {bootLoading ? (
+          <div className="min-h-screen flex items-center justify-center bg-app text-app-text-muted">
+            <div className="text-sm">Inicializando SASI…</div>
+          </div>
+        ) : !session ? (
+          <Login />
+        ) : (
+          <Dashboard session={session} />
+        )}
+      </UIProvider>
+    </ErrorBoundary>
   );
 }
