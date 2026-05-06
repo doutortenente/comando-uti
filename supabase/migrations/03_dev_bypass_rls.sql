@@ -1,0 +1,35 @@
+-- ============================================================================
+-- SASI · Migration 03: DEV BYPASS — RLS temporariamente aberto
+-- APLICADA EM: 2026-05-06
+-- STATUS: ATIVA (remover quando auth email+senha for implementada)
+--
+-- Contexto: Auth foi desabilitada temporariamente porque o hospital bloqueia
+-- Gmail (magic-link não funciona). O App.tsx usa uma session mock sem auth real.
+-- Sem estas policies, auth.uid() retorna NULL e todas as queries dão vazio.
+--
+-- Ver "Plano de ação login e autenticação SASI" no Google Drive.
+-- ============================================================================
+
+-- APLICAR (já aplicado em produção):
+-- CREATE POLICY "dev_bypass" ON public.pacientes FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.evolucoes FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.eventos_clinicos FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.pendencias FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.culturas FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.antibiograma FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.atbs FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.alerts_log FOR ALL USING (true) WITH CHECK (true);
+-- CREATE POLICY "dev_bypass" ON public.ingest_audit_log FOR ALL USING (true) WITH CHECK (true);
+
+-- ============================================================================
+-- REVERTER (rodar quando auth for reativada):
+-- ============================================================================
+-- DROP POLICY "dev_bypass" ON public.pacientes;
+-- DROP POLICY "dev_bypass" ON public.evolucoes;
+-- DROP POLICY "dev_bypass" ON public.eventos_clinicos;
+-- DROP POLICY "dev_bypass" ON public.pendencias;
+-- DROP POLICY "dev_bypass" ON public.culturas;
+-- DROP POLICY "dev_bypass" ON public.antibiograma;
+-- DROP POLICY "dev_bypass" ON public.atbs;
+-- DROP POLICY "dev_bypass" ON public.alerts_log;
+-- DROP POLICY "dev_bypass" ON public.ingest_audit_log;

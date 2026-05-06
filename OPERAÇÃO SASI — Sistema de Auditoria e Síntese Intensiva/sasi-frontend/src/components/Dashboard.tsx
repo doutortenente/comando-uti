@@ -5,7 +5,8 @@
 // ============================================================================
 import { useCallback, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabaseClient';
+// AUTH BYPASS: supabase import removido (era usado só pelo logout)
+// import { supabase } from '../lib/supabaseClient';
 import { useSupabasePatients } from '../hooks/useSupabasePatients';
 import { useClinicalAlerts } from '../hooks/useClinicalAlerts';
 import { useUI } from '../lib/theme';
@@ -17,7 +18,7 @@ import ViewSwitcher from './ViewSwitcher';
 import CriticalAlerts from './CriticalAlerts';
 import SplitView from './SplitView';
 import TableView from './TableView';
-import { Bell, BedDouble, FileDown, Filter, LogOut, Plus, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { Bell, BedDouble, FileDown, Filter, Plus, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { LeitoCardSkeleton, SplitSkeleton, EmptyState } from './Skeletons';
 import NovoLeitoModal from './NovoLeitoModal';
 // Lazy import pra não incluir jspdf (200KB+) no bundle inicial
@@ -67,9 +68,8 @@ export default function Dashboard({ session }: Props) {
     return { total, criticos, graves, piorando };
   }, [dashboard]);
 
-  async function logout() {
-    await supabase.auth.signOut();
-  }
+  // AUTH BYPASS: logout desabilitado temporariamente. Reativar com auth.
+  // async function logout() { await supabase.auth.signOut(); }
 
   return (
     <div className="min-h-screen bg-app text-app-text">
@@ -82,7 +82,9 @@ export default function Dashboard({ session }: Props) {
             </div>
             <div>
               <div className="text-base font-bold">SASI · Comando UTI Alpha</div>
-              <div className="text-[11px] text-app-text-muted">{session.user.email}</div>
+              <div className="text-[11px] text-app-text-muted">
+                {session.user.email === 'dev@sasi-uti.local' ? 'Modo dev · sem auth' : session.user.email}
+              </div>
             </div>
           </div>
 
@@ -127,6 +129,7 @@ export default function Dashboard({ session }: Props) {
             >
               <RefreshCw className="w-4 h-4" />
             </button>
+            {/* AUTH BYPASS: botão logout oculto. Reativar com auth.
             <button
               onClick={logout}
               className="p-2 hover:bg-app-tertiary rounded text-app-text-muted hover:text-app-text transition"
@@ -134,6 +137,7 @@ export default function Dashboard({ session }: Props) {
             >
               <LogOut className="w-4 h-4" />
             </button>
+            */}
           </div>
         </div>
 
