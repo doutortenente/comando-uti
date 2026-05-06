@@ -3,12 +3,13 @@
 // 3 view modes: plantao (Cards) / round (Split) / editor (Tabela)
 // 3 themes (via UIProvider): dark / clinical / light
 // ============================================================================
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 import { useSupabasePatients } from '../hooks/useSupabasePatients';
 import { useClinicalAlerts } from '../hooks/useClinicalAlerts';
 import { useUI } from '../lib/theme';
+import { useKeyboardShortcuts } from '../lib/useKeyboardShortcuts';
 import LeitoCard from './LeitoCard';
 import PatientModal from './PatientModal';
 import ThemeToggle from './ThemeToggle';
@@ -16,7 +17,11 @@ import ViewSwitcher from './ViewSwitcher';
 import CriticalAlerts from './CriticalAlerts';
 import SplitView from './SplitView';
 import TableView from './TableView';
-import { Bell, Filter, LogOut, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { Bell, BedDouble, FileDown, Filter, LogOut, Plus, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { LeitoCardSkeleton, SplitSkeleton, EmptyState } from './Skeletons';
+import NovoLeitoModal from './NovoLeitoModal';
+// Lazy import pra não incluir jspdf (200KB+) no bundle inicial
+const lazyExportPDF = () => import('../lib/exportPDF');
 
 interface Props {
   session: Session;
@@ -28,9 +33,26 @@ type UtiFilter = (typeof UTIS)[number] | 'TODAS';
 export default function Dashboard({ session }: Props) {
   const { dashboard, loading, error } = useSupabasePatients();
   const { totalCriticos, totalWarnings } = useClinicalAlerts();
-  const { viewMode } = useUI();
+  const { viewMode, setViewMode, cycleTheme } = useUI();
   const [filter, setFilter] = useState<UtiFilter>('TODAS');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showNovoLeito, setShowNovoLeito] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Atalhos de teclado globais — ativos quando nenhum modal está aberto
+  const noModal = !selectedId && !showNovoLeito;
+  const shortcuts = useCallback(() => ({
+    'j': () => {/* next patient — futuramente com selectedIndex */},
+    'k': () => {/* prev patient */},
+    't': cycleTheme,
+    'n': () => setShowNovoLeito(true),
+    '?': () => setShowShortcuts((v) => !v),
+    'Escape': () => { setShowShortcuts(false); setSelectedId(null); },
+    'g p': () => setViewMode('plantao'),
+    'g r': () => setViewMode('round'),
+    'g e': () => setViewMode('editor'),
+  }), [cycleTheme, setViewMode]);
+  useKeyboardShortcuts(shortcuts(), noModal);
 
   const visible = useMemo(
     () => (filter === 'TODAS' ? dashboard : dashboard.filter((r) => r.uti === filter)),
@@ -74,6 +96,27 @@ export default function Dashboard({ session }: Props) {
               <div className="flex items-center gap-1.5 bg-amber-950 text-amber-300 px-2.5 py-1 rounded-lg text-xs">
                 {totalWarnings} warnings
               </div>
+            )}
+            <button
+              onClick={() => setShowNovoLeito(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition"
+              title="Admitir paciente"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Novo Leito
+            </button>
+            {dashboard.length > 0 && (
+              <button
+                onClick={async () => {
+                  const { exportPassagemTurno } = await lazyExportPDF();
+                  exportPassagemTurno(visible, session.user.email ?? undefined);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 text-xs font-medium rounded-lg border border-app-border transition"
+                title="Exportar passagem de turno (PDF)"
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                PDF
+              </button>
             )}
             <ViewSwitcher />
             <ThemeToggle />
@@ -142,8 +185,20 @@ export default function Dashboard({ session }: Props) {
         {/* Critical alerts banner — sempre visível pra trazer críticos pra cima */}
         <CriticalAlerts patients={visible} onSelect={setSelectedId} />
 
-        {loading && (
-          <div className="text-center text-app-text-muted py-12">Carregando trincheira…</div>
+        {loading && viewMode === 'plantao' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <LeitoCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
+
+        {loading && viewMode === 'round' && <SplitSkeleton />}
+
+        {loading && viewMode === 'editor' && (
+          <div className="text-center text-app-text-muted py-12 text-sm animate-pulse">
+            Carregando trincheira…
+          </div>
         )}
 
         {error && (
@@ -153,16 +208,11 @@ export default function Dashboard({ session }: Props) {
         )}
 
         {!loading && visible.length === 0 && (
-          <div className="text-center text-app-text-muted py-16">
-            <p className="text-lg mb-1">
-              Nenhum leito ativo {filter !== 'TODAS' && `em ${filter}`}.
-            </p>
-            <p className="text-sm">
-              Use a skill{' '}
-              <code className="bg-app-tertiary px-1.5 py-0.5 rounded">sasi-ingest-export</code> pra
-              admitir um paciente.
-            </p>
-          </div>
+          <EmptyState
+            icon={BedDouble}
+            title={filter !== 'TODAS' ? `Nenhum leito ativo em ${filter}` : 'Nenhum leito ativo'}
+            description="Admita um paciente usando a skill sasi-ingest-export ou o botão Novo Leito (em breve)."
+          />
         )}
 
         {/* VIEW MODES */}
@@ -183,12 +233,66 @@ export default function Dashboard({ session }: Props) {
         )}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 py-6 text-[11px] text-app-text-muted text-center">
-        SASI v1.0 · Supabase realtime · LGPD-RLS · {new Date().toLocaleString('pt-BR')}
+      <footer className="max-w-7xl mx-auto px-4 py-6 text-[11px] text-app-text-muted text-center flex items-center justify-center gap-3">
+        <span>SASI v1.0 · Supabase realtime · LGPD-RLS · {new Date().toLocaleString('pt-BR')}</span>
+        <button
+          onClick={() => setShowShortcuts(true)}
+          className="px-1.5 py-0.5 rounded border border-app-border bg-app-tertiary hover:text-app-text-2 transition text-[10px] font-mono"
+        >
+          ? atalhos
+        </button>
       </footer>
 
       {selectedId && (
         <PatientModal pacienteId={selectedId} onClose={() => setSelectedId(null)} />
+      )}
+
+      {showNovoLeito && (
+        <NovoLeitoModal
+          userId={session.user.id}
+          onClose={() => setShowNovoLeito(false)}
+          onSuccess={() => {
+            // Realtime já recarrega automaticamente via channel listener.
+          }}
+        />
+      )}
+
+      {showShortcuts && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowShortcuts(false)}
+        >
+          <div
+            className="bg-app-card border border-app-border rounded-2xl shadow-2xl p-6 w-full max-w-sm sasi-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold text-app-text mb-4">Atalhos de teclado</h3>
+            <div className="space-y-1.5 text-xs">
+              {[
+                ['?', 'Abrir/fechar este painel'],
+                ['t', 'Ciclar tema (dark → clinical → light)'],
+                ['n', 'Novo leito'],
+                ['Esc', 'Fechar modal / painel'],
+                ['g p', 'Modo Plantão (Cards)'],
+                ['g r', 'Modo Round (Split)'],
+                ['g e', 'Modo Editor (Tabela)'],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <kbd className="shrink-0 min-w-[40px] text-center px-1.5 py-0.5 rounded border border-app-border bg-app-tertiary font-mono text-[11px] text-app-text-2">
+                    {key}
+                  </kbd>
+                  <span className="text-app-text-muted">{desc}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowShortcuts(false)}
+              className="mt-5 w-full py-2 text-sm font-medium rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 transition"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

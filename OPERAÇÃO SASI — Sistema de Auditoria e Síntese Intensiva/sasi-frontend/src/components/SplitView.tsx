@@ -2,10 +2,11 @@
 // SASI · SplitView — modo "Round" (lista lateral + preview do paciente)
 // ============================================================================
 import { useState } from 'react';
-import { Edit3 } from 'lucide-react';
+import { BedDouble, Edit3 } from 'lucide-react';
 import type { DashboardRow } from '../lib/supabaseClient';
 import { sofaColorClass } from '../lib/drugs';
 import LeitoCard from './LeitoCard';
+import { EmptyState } from './Skeletons';
 
 interface Props {
   patients: DashboardRow[];
@@ -20,9 +21,11 @@ export default function SplitView({ patients, onOpenFull }: Props) {
 
   if (!selected) {
     return (
-      <div className="text-center text-app-text-muted py-16">
-        Nenhum paciente ativo pra modo Round.
-      </div>
+      <EmptyState
+        icon={BedDouble}
+        title="Nenhum paciente ativo"
+        description="Admita um paciente pra usar o modo Round."
+      />
     );
   }
 

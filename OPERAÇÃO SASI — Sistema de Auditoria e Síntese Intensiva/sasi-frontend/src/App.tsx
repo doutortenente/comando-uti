@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabaseClient';
 import { UIProvider } from './lib/theme';
+import { ToastProvider } from './lib/useToasts';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -33,15 +34,17 @@ export default function App() {
   return (
     <ErrorBoundary>
       <UIProvider>
-        {bootLoading ? (
-          <div className="min-h-screen flex items-center justify-center bg-app text-app-text-muted">
-            <div className="text-sm">Inicializando SASI…</div>
-          </div>
-        ) : !session ? (
-          <Login />
-        ) : (
-          <Dashboard session={session} />
-        )}
+        <ToastProvider>
+          {bootLoading ? (
+            <div className="min-h-screen flex items-center justify-center bg-app text-app-text-muted">
+              <div className="text-sm">Inicializando SASI…</div>
+            </div>
+          ) : !session ? (
+            <Login />
+          ) : (
+            <Dashboard session={session} />
+          )}
+        </ToastProvider>
       </UIProvider>
     </ErrorBoundary>
   );

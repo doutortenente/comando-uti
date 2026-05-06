@@ -8,7 +8,7 @@ import {
   X, Clock, User, Activity, Heart, Droplets, AlertTriangle,
   Thermometer, Brain, Wind, Zap, FlaskConical, Microscope,
   ClipboardList, ChevronRight, Pill, Edit3, FileText,
-  CheckCircle2, Circle, Lock,
+  CheckCircle2, Circle, Lock, BarChart3,
 } from 'lucide-react';
 import {
   supabase,
@@ -20,6 +20,8 @@ import {
 import { sofaColorClass } from '../lib/drugs';
 import InfusionEditor, { type Infusion } from './InfusionEditor';
 import MiniChart from './MiniChart';
+import { ModalSkeleton, EmptyState } from './Skeletons';
+import TimelineDrawer from './TimelineDrawer';
 
 type Tab = 'detalhes' | 'editar' | 'evolucao';
 
@@ -119,6 +121,7 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [sofaHistory, setSofaHistory] = useState<EventoClinico[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showTimeline, setShowTimeline] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -240,11 +243,7 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
           <X className="w-5 h-5" />
         </button>
 
-        {loading && (
-          <div className="p-12 text-center text-app-text-muted text-sm">
-            Carregando dados do paciente…
-          </div>
-        )}
+        {loading && <ModalSkeleton />}
 
         {!loading && paciente && (
           <>
@@ -271,6 +270,13 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                       <Clock className="w-3 h-3" /> D{diasInternacao} — adm{' '}
                       {new Date(paciente.data_adm).toLocaleDateString('pt-BR')}
                     </span>
+                    <button
+                      onClick={() => setShowTimeline(true)}
+                      className="flex items-center gap-1 ml-auto px-2 py-1 rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-muted hover:text-app-text-2 text-[11px] font-medium transition"
+                    >
+                      <BarChart3 className="w-3 h-3" />
+                      Timeline
+                    </button>
                   </div>
                 </div>
               </div>
@@ -511,8 +517,12 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                   )}
 
                   {!evolucao && (
-                    <div className="md:col-span-2 text-center py-8 text-app-text-muted text-sm">
-                      Nenhuma evolução registrada ainda.
+                    <div className="md:col-span-2">
+                      <EmptyState
+                        icon={FileText}
+                        title="Nenhuma evolução registrada"
+                        description="Use a skill sasi-ingest-export ou a edge function /ocr-ingest pra registrar a primeira evolução."
+                      />
                     </div>
                   )}
                 </div>
@@ -647,6 +657,14 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
           </>
         )}
       </div>
+
+      {showTimeline && paciente && (
+        <TimelineDrawer
+          pacienteId={pacienteId}
+          pacienteNome={paciente.nome}
+          onClose={() => setShowTimeline(false)}
+        />
+      )}
     </div>
   );
 }
