@@ -1,7 +1,11 @@
 // ============================================================================
-// SASI · LeitoCard — uma "trincheira" por paciente ativo (re-skin Apr-30)
+// SASI · LeitoCard — card de leito redesenhado (layout Gemini-style)
+// border-l-4 por gravidade + badge strip + visual hierarchy melhorada
 // ============================================================================
-import { Activity, AlertTriangle, Clock, Droplets, Heart, Skull, TrendingDown, TrendingUp } from 'lucide-react';
+import {
+  Activity, AlertTriangle, Clock, Droplets, Heart,
+  Skull, TrendingDown, TrendingUp,
+} from 'lucide-react';
 import type { DashboardRow } from '../lib/supabaseClient';
 import { sofaColorClass } from '../lib/drugs';
 
@@ -21,98 +25,96 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
   return (
     <button
       onClick={() => onSelect?.(row.paciente_id)}
-      className={`text-left w-full rounded-xl border transition shadow-lg sasi-fade-in ${
+      className={`text-left w-full rounded-xl border transition shadow-lg sasi-fade-in card-grav-${row.gravidade} ${
         compact ? 'p-3' : 'p-4'
       } gravidade-${row.gravidade} ${row.gravidade === 'critico' ? 'sasi-critical-pulse' : ''} hover:-translate-y-0.5 hover:shadow-xl`}
     >
-      {/* HEADER */}
-      <div className={`flex items-start justify-between ${compact ? 'mb-1.5' : 'mb-2.5'}`}>
+      {/* HEADER — Leito grande + Nome */}
+      <div className={`flex items-start justify-between gap-2 ${compact ? 'mb-1' : 'mb-2'}`}>
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-mono opacity-70">
-            {row.uti} · LEITO {row.leito}
+          <div className="flex items-baseline gap-2">
+            <span className={`font-black tabular-nums ${compact ? 'text-lg' : 'text-2xl'}`}>
+              {row.leito}
+            </span>
+            <span className="text-[10px] font-mono opacity-60">{row.uti}</span>
           </div>
           <div
-            className={`font-semibold truncate ${compact ? 'text-sm' : 'text-base'}`}
+            className={`font-semibold truncate ${compact ? 'text-xs' : 'text-sm'}`}
             title={row.nome}
           >
             {row.nome}
           </div>
         </div>
-        <span
-          className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded`}
-          style={{ background: 'rgba(0,0,0,0.25)' }}
-        >
-          {row.gravidade}
-        </span>
-      </div>
-
-      {/* SOFA + DELTA */}
-      <div className={`flex items-baseline gap-3 ${compact ? 'mb-1.5' : 'mb-2.5'}`}>
-        <div>
-          <div className="text-[10px] uppercase opacity-70">SOFA</div>
-          <div className={`font-bold tabular-nums ${sofaColorClass(row.sofa_total)} ${compact ? 'text-2xl' : 'text-3xl'}`}>
+        {/* SOFA badge compacto */}
+        <div className="text-right shrink-0">
+          <div className="text-[9px] uppercase opacity-60 tracking-wider">SOFA</div>
+          <div className={`font-bold tabular-nums ${sofaColorClass(row.sofa_total)} ${compact ? 'text-xl' : 'text-2xl'}`}>
             {row.sofa_total ?? '—'}
           </div>
-        </div>
-        {delta != null && delta !== 0 && (
-          <div
-            className={`flex items-center gap-1 text-sm tabular-nums ${
-              deltaIsBad ? 'text-red-400' : deltaIsGood ? 'text-emerald-400' : 'opacity-60'
-            }`}
-          >
-            {deltaIsBad ? <TrendingUp className="w-4 h-4" /> : deltaIsGood ? <TrendingDown className="w-4 h-4" /> : null}
-            <span>
-              {delta > 0 ? '+' : ''}
-              {delta} 24h
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* META — escondido em compact */}
-      {!compact && (
-        <>
-          <div className="grid grid-cols-2 gap-1.5 text-xs">
-            <div className="flex items-center gap-1.5 opacity-90">
-              <Clock className="w-3.5 h-3.5 opacity-70" /> D{row.dias_internacao}
-            </div>
-            <div className="flex items-center gap-1.5 opacity-90">
-              <Activity className="w-3.5 h-3.5 opacity-70" /> {row.idade ?? '?'}a / {row.peso ?? '?'}kg
-            </div>
-            {dvaCount > 0 && (
-              <div className="flex items-center gap-1.5 col-span-2 text-red-300">
-                <Heart className="w-3.5 h-3.5" /> DVA ({dvaCount})
-              </div>
-            )}
-            {sedCount > 0 && (
-              <div className="flex items-center gap-1.5 col-span-2 text-purple-300">
-                <Droplets className="w-3.5 h-3.5" /> Sedação ({sedCount})
-              </div>
-            )}
-            {row.pendencias_abertas > 0 && (
-              <div className="flex items-center gap-1.5 col-span-2 text-amber-300">
-                <AlertTriangle className="w-3.5 h-3.5" /> {row.pendencias_abertas} pendência
-                {row.pendencias_abertas > 1 ? 's' : ''}
-              </div>
-            )}
-            {row.gravidade === 'obito' && (
-              <div className="flex items-center gap-1.5 col-span-2 opacity-60">
-                <Skull className="w-3.5 h-3.5" /> Óbito registrado
-              </div>
-            )}
-          </div>
-
-          {row.hd && (
+          {delta != null && delta !== 0 && (
             <div
-              className="mt-2.5 pt-2.5 border-t text-[11px] opacity-75 line-clamp-2"
-              style={{ borderColor: 'rgba(255,255,255,0.08)' }}
-              title={row.hd}
+              className={`flex items-center justify-end gap-0.5 text-[10px] tabular-nums ${
+                deltaIsBad ? 'text-red-400' : deltaIsGood ? 'text-emerald-400' : 'opacity-60'
+              }`}
             >
-              {row.hd}
+              {deltaIsBad ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {delta > 0 ? '+' : ''}{delta}
             </div>
           )}
-        </>
+        </div>
+      </div>
+
+      {/* HD — sempre visível, truncado */}
+      {!compact && row.hd && (
+        <div
+          className="text-[11px] opacity-70 line-clamp-2 mb-2 leading-relaxed"
+          title={row.hd}
+        >
+          {row.hd}
+        </div>
       )}
+
+      {/* META ROW — dias + idade/peso */}
+      {!compact && (
+        <div className="flex items-center gap-3 text-[11px] opacity-80 mb-2">
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3 opacity-60" /> D{row.dias_internacao}
+          </span>
+          <span className="flex items-center gap-1">
+            <Activity className="w-3 h-3 opacity-60" /> {row.idade ?? '?'}a / {row.peso ?? '?'}kg
+          </span>
+        </div>
+      )}
+
+      {/* BADGE STRIP — Gemini-style colored pills */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {/* Gravidade */}
+        <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded gravidade-${row.gravidade}`}>
+          {row.gravidade}
+        </span>
+
+        {dvaCount > 0 && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300">
+            <Heart className="w-2.5 h-2.5" /> DVA {dvaCount}
+          </span>
+        )}
+        {sedCount > 0 && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-950 text-purple-300">
+            <Droplets className="w-2.5 h-2.5" /> Sed {sedCount}
+          </span>
+        )}
+        {row.pendencias_abertas > 0 && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 ml-auto">
+            <AlertTriangle className="w-2.5 h-2.5" /> {row.pendencias_abertas}
+          </span>
+        )}
+
+        {row.gravidade === 'obito' && (
+          <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded opacity-60">
+            <Skull className="w-2.5 h-2.5" /> Óbito
+          </span>
+        )}
+      </div>
     </button>
   );
 }

@@ -125,3 +125,29 @@ body.theme-clinical .sofa-critical, body.theme-light .sofa-critical { color: #dc
 
 body.theme-clinical .dose-ok, body.theme-light .dose-ok           { background:#d1fae5; color:#065f46; }
 body.theme-clinical .dose-warning, body.theme-light .dose-warning { background:#fecaca; color:#991b1b; }
+
+/* ============================================================================
+   System colors — light/clinical overrides (dark uses Tailwind utilities directly)
+   ============================================================================ */
+body.theme-clinical .sys-neuro,   body.theme-light .sys-neuro   { background:#faf5ff; border-left-color:#a855f7; }
+body.theme-clinical .sys-resp,    body.theme-light .sys-resp    { background:#f0f9ff; border-left-color:#0ea5e9; }
+body.theme-clinical .sys-hemo,    body.theme-light .sys-hemo    { background:#fff1f2; border-left-color:#f43f5e; }
+body.theme-clinical .sys-tgi,     body.theme-light .sys-tgi     { background:#fffbeb; border-left-color:#f59e0b; }
+body.theme-clinical .sys-renal,   body.theme-light .sys-renal   { background:#f7fee7; border-left-color:#84cc16; }
+body.theme-clinical .sys-hemato,  body.theme-light .sys-hemato  { background:#fdf2f8; border-left-color:#ec4899; }
+body.theme-clinical .sys-infecto, body.theme-light .sys-infecto { background:#f0fdfa; border-left-color:#14b8a6; }
+
+body.theme-clinical .sys-neuro .sys-title,   body.theme-light .sys-neuro .sys-title   { color:#7e22ce; }
+body.theme-clinical .sys-resp .sys-title,    body.theme-light .sys-resp .sys-title    { color:#0369a1; }
+body.theme-clinical .sys-hemo .sys-title,    body.theme-light .sys-hemo .sys-title    { color:#be123c; }
+body.theme-clinical .sys-tgi .sys-title,     body.theme-light .sys-tgi .sys-title     { color:#b45309; }
+body.theme-clinical .sys-renal .sys-title,   body.theme-light .sys-renal .sys-title   { color:#4d7c0f; }
+body.theme-clinical .sys-hemato .sys-title,  body.theme-light .sys-hemato .sys-title  { color:#be185d; }
+body.theme-clinical .sys-infecto .sys-title, body.theme-light .sys-infecto .sys-title { color:#0f766e; }
+
+/* Card gravity left-border accent (Gemini-style) */
+.card-grav-estavel  { border-left: 4px solid #10b981; }
+.card-grav-moderado { border-left: 4px solid #f59e0b; }
+.card-grav-grave    { border-left: 4px solid #f97316; }
+.card-grav-critico  { border-left: 4px solid #dc2626; }
+.card-grav-obito    { border-left: 4px solid #475569; }
