@@ -22,6 +22,8 @@ import InfusionEditor, { type Infusion } from './InfusionEditor';
 import MiniChart from './MiniChart';
 import { ModalSkeleton, EmptyState } from './Skeletons';
 import TimelineDrawer from './TimelineDrawer';
+import DiureseCalc from './DiureseCalc';
+import ClinicalExtras from './ClinicalExtras';
 
 type Tab = 'detalhes' | 'editar' | 'evolucao';
 
@@ -515,6 +517,18 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                       </ul>
                     </div>
                   )}
+
+                  {/* DIURESE CALC */}
+                  {paciente && (
+                    <div className="md:col-span-2">
+                      <DiureseCalc pesoInicial={paciente.peso} />
+                    </div>
+                  )}
+
+                  {/* REFERÊNCIAS CLÍNICAS */}
+                  <div className="md:col-span-2">
+                    <ClinicalExtras />
+                  </div>
 
                   {!evolucao && (
                     <div className="md:col-span-2">

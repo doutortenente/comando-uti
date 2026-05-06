@@ -18,9 +18,11 @@ import ViewSwitcher from './ViewSwitcher';
 import CriticalAlerts from './CriticalAlerts';
 import SplitView from './SplitView';
 import TableView from './TableView';
-import { Bell, BedDouble, FileDown, Filter, Plus, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { Bell, BedDouble, ClipboardCopy, FileDown, Filter, Plus, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { LeitoCardSkeleton, SplitSkeleton, EmptyState } from './Skeletons';
 import NovoLeitoModal from './NovoLeitoModal';
+import { gerarTextoPlantao } from '../lib/drugs';
+import { useToasts } from '../lib/useToasts';
 // Lazy import pra não incluir jspdf (200KB+) no bundle inicial
 const lazyExportPDF = () => import('../lib/exportPDF');
 
@@ -34,6 +36,7 @@ type UtiFilter = (typeof UTIS)[number] | 'TODAS';
 export default function Dashboard({ session }: Props) {
   const { dashboard, loading, error } = useSupabasePatients();
   const { totalCriticos, totalWarnings } = useClinicalAlerts();
+  const { addToast } = useToasts();
   const { viewMode, setViewMode, cycleTheme } = useUI();
   const [filter, setFilter] = useState<UtiFilter>('TODAS');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -108,17 +111,31 @@ export default function Dashboard({ session }: Props) {
               Novo Leito
             </button>
             {dashboard.length > 0 && (
-              <button
-                onClick={async () => {
-                  const { exportPassagemTurno } = await lazyExportPDF();
-                  exportPassagemTurno(visible, session.user.email ?? undefined);
-                }}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 text-xs font-medium rounded-lg border border-app-border transition"
-                title="Exportar passagem de turno (PDF)"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                PDF
-              </button>
+              <>
+                <button
+                  onClick={async () => {
+                    const texto = gerarTextoPlantao(visible, filter);
+                    await navigator.clipboard.writeText(texto);
+                    addToast('success', `Plantão copiado (${visible.length} pacientes)`);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 text-xs font-medium rounded-lg border border-app-border transition"
+                  title="Copiar passagem de turno (texto pra WhatsApp)"
+                >
+                  <ClipboardCopy className="w-3.5 h-3.5" />
+                  Copiar
+                </button>
+                <button
+                  onClick={async () => {
+                    const { exportPassagemTurno } = await lazyExportPDF();
+                    exportPassagemTurno(visible, session.user.email ?? undefined);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 text-xs font-medium rounded-lg border border-app-border transition"
+                  title="Exportar passagem de turno (PDF)"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  PDF
+                </button>
+              </>
             )}
             <ViewSwitcher />
             <ThemeToggle />
