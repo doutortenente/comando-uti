@@ -430,6 +430,86 @@ export const SYSTEM_COLORS_LIGHT: Record<string, SystemColorDef> = {
 // ============================================================================
 // LABELS CLÍNICOS — mapeia chaves JSON da evolução pra labels humanos (PT-BR)
 // ============================================================================
+// ============================================================================
+// THRESHOLDS CLÍNICOS — limites HITL de sinais vitais (ambas tabelas Excel)
+// Usados para alertas automáticos e color-coding no painel geral
+// ============================================================================
+export interface VitalThreshold {
+  label: string;
+  unit: string;
+  low?: number;       // abaixo = alerta
+  high?: number;      // acima = alerta
+  absurdLow?: number; // valor absurdo (pedir revisão)
+  absurdHigh?: number;
+}
+
+export const VITAL_THRESHOLDS: Record<string, VitalThreshold> = {
+  pas:   { label: 'PAS',  unit: 'mmHg', low: 90,  high: 180, absurdLow: 50,  absurdHigh: 260 },
+  pad:   { label: 'PAD',  unit: 'mmHg', low: 45,  high: 120, absurdLow: 20,  absurdHigh: 200 },
+  pam:   { label: 'PAM',  unit: 'mmHg', low: 65,  high: 130, absurdLow: 30,  absurdHigh: 200 },
+  fc:    { label: 'FC',   unit: 'bpm',             high: 100, absurdLow: 20,  absurdHigh: 250 },
+  fr:    { label: 'FR',   unit: 'rpm',             high: 25,  absurdLow: 4,   absurdHigh: 80  },
+  spo2:  { label: 'SpO₂', unit: '%',    low: 88,              absurdLow: 50,  absurdHigh: 100 },
+  tax:   { label: 'TAX',  unit: '°C',              high: 38,  absurdLow: 30,  absurdHigh: 43  },
+  dx:    { label: 'Dx',   unit: 'mg/dL',           high: 180, absurdLow: 20,  absurdHigh: 800 },
+};
+
+/** Checa se valor excede threshold clínico */
+export function checkVitalAlert(key: string, value: number): 'ok' | 'low' | 'high' | 'absurd' {
+  const t = VITAL_THRESHOLDS[key];
+  if (!t) return 'ok';
+  if (t.absurdLow != null && value < t.absurdLow) return 'absurd';
+  if (t.absurdHigh != null && value > t.absurdHigh) return 'absurd';
+  if (t.low != null && value < t.low) return 'low';
+  if (t.high != null && value > t.high) return 'high';
+  return 'ok';
+}
+
+// ============================================================================
+// REFERÊNCIAS LABORATORIAIS — valores normais pra color-coding
+// Fonte: Tabela SASI_UTI_20Leitos.xlsx (Sheet U2-L01, rows 22-40)
+// ============================================================================
+export interface LabReference {
+  label: string;
+  unit: string;
+  low: number;
+  high: number;
+  /** se true, alerta é valor > high (ex: lactato) */
+  onlyHigh?: boolean;
+}
+
+export const LAB_REFERENCES: Record<string, LabReference> = {
+  hb:       { label: 'Hb',      unit: 'g/dL',    low: 12,    high: 17    },
+  ht:       { label: 'Ht',      unit: '%',        low: 36,    high: 52    },
+  plaq:     { label: 'Plaq',    unit: '/mm³',     low: 150,   high: 400   },
+  leuco:    { label: 'Leuco',   unit: '/mm³',     low: 4,     high: 11    },
+  ur:       { label: 'Uréia',   unit: 'mg/dL',    low: 15,    high: 45    },
+  cr:       { label: 'Cr',      unit: 'mg/dL',    low: 0.6,   high: 1.2   },
+  na:       { label: 'Na⁺',     unit: 'mEq/L',    low: 136,   high: 145   },
+  k:        { label: 'K⁺',      unit: 'mEq/L',    low: 3.5,   high: 5.0   },
+  mg:       { label: 'Mg²⁺',    unit: 'mg/dL',    low: 1.6,   high: 2.6   },
+  cai:      { label: 'Ca²⁺ i',  unit: 'mmol/L',   low: 1.15,  high: 1.35  },
+  lactato:  { label: 'Lactato', unit: 'mmol/L',   low: 0,     high: 2,    onlyHigh: true },
+  pcr:      { label: 'PCR',     unit: 'mg/L',     low: 0,     high: 5,    onlyHigh: true },
+  ph:       { label: 'pH',      unit: '',          low: 7.35,  high: 7.45  },
+  pco2:     { label: 'pCO₂',   unit: 'mmHg',     low: 35,    high: 45    },
+  hco3:     { label: 'HCO₃⁻',  unit: 'mEq/L',    low: 22,    high: 26    },
+  bb:       { label: 'BT',      unit: 'mg/dL',    low: 0,     high: 1.2,  onlyHigh: true },
+};
+
+/** Checa se lab está fora da referência */
+export function checkLabAlert(key: string, value: number): 'normal' | 'low' | 'high' {
+  const r = LAB_REFERENCES[key];
+  if (!r) return 'normal';
+  if (r.onlyHigh) return value > r.high ? 'high' : 'normal';
+  if (value < r.low) return 'low';
+  if (value > r.high) return 'high';
+  return 'normal';
+}
+
+// ============================================================================
+// LABELS CLÍNICOS — mapeia chaves JSON da evolução pra labels humanos (PT-BR)
+// ============================================================================
 export const CLINICAL_LABELS: Record<string, Record<string, string>> = {
   neuro: {
     glasgow: 'ECG (Glasgow)',

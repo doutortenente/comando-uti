@@ -25,6 +25,7 @@ import { ModalSkeleton, EmptyState } from './Skeletons';
 import TimelineDrawer from './TimelineDrawer';
 import DiureseCalc from './DiureseCalc';
 import ClinicalExtras from './ClinicalExtras';
+import VitalsLabsPanel from './VitalsLabsPanel';
 
 type Tab = 'detalhes' | 'editar' | 'evolucao';
 
@@ -464,6 +465,38 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                         </ul>
                       )}
                     </div>
+                  )}
+
+                  {/* SINAIS VITAIS + LABORATÓRIO — FASE 1 da planilha */}
+                  {evolucao && (
+                    <VitalsLabsPanel
+                      vitals={{
+                        ...(evolucao.hemo as Record<string, unknown> ?? {}),
+                        ...(evolucao.resp as Record<string, unknown> ?? {}),
+                        tax: ((evolucao.infecto as Record<string, unknown>)?.tmax ?? (evolucao.infecto as Record<string, unknown>)?.temperatura ?? (evolucao.infecto as Record<string, unknown>)?.temp) as string | number | undefined,
+                        dx: ((evolucao.tgi as Record<string, unknown>)?.dx ?? (evolucao.tgi as Record<string, unknown>)?.glicemia) as string | number | undefined,
+                        bh: ((evolucao.renal as Record<string, unknown>)?.bh ?? (evolucao.renal as Record<string, unknown>)?.balanco_hidrico) as string | number | undefined,
+                        diurese: ((evolucao.renal as Record<string, unknown>)?.diurese ?? (evolucao.renal as Record<string, unknown>)?.diurese_24h) as string | number | undefined,
+                      }}
+                      labs={{
+                        hb: (evolucao.hemato as Record<string, unknown>)?.hb as string | undefined,
+                        ht: (evolucao.hemato as Record<string, unknown>)?.ht as string | undefined,
+                        plaq: (evolucao.hemato as Record<string, unknown>)?.plaquetas as string | undefined ?? (evolucao.hemato as Record<string, unknown>)?.plaq as string | undefined,
+                        leuco: (evolucao.hemato as Record<string, unknown>)?.leucocitos as string | undefined ?? (evolucao.hemato as Record<string, unknown>)?.leuco as string | undefined,
+                        cr: (evolucao.renal as Record<string, unknown>)?.creatinina as string | undefined ?? (evolucao.renal as Record<string, unknown>)?.cr as string | undefined,
+                        ur: (evolucao.renal as Record<string, unknown>)?.ureia as string | undefined ?? (evolucao.renal as Record<string, unknown>)?.ur as string | undefined,
+                        na: (evolucao.renal as Record<string, unknown>)?.na as string | undefined ?? (evolucao.renal as Record<string, unknown>)?.sodio as string | undefined,
+                        k: (evolucao.renal as Record<string, unknown>)?.k as string | undefined ?? (evolucao.renal as Record<string, unknown>)?.potassio as string | undefined,
+                        mg: (evolucao.renal as Record<string, unknown>)?.mg as string | undefined,
+                        cai: (evolucao.renal as Record<string, unknown>)?.ca as string | undefined ?? (evolucao.renal as Record<string, unknown>)?.cai as string | undefined,
+                        lactato: (evolucao.hemo as Record<string, unknown>)?.lactato as string | undefined,
+                        pcr: (evolucao.infecto as Record<string, unknown>)?.pcr as string | undefined,
+                        ph: (evolucao.renal as Record<string, unknown>)?.ph as string | undefined,
+                        pco2: (evolucao.resp as Record<string, unknown>)?.paco2 as string | undefined,
+                        hco3: (evolucao.renal as Record<string, unknown>)?.bic as string | undefined ?? (evolucao.renal as Record<string, unknown>)?.bicarbonato as string | undefined,
+                        bb: (evolucao.hemato as Record<string, unknown>)?.bilirrubina as string | undefined ?? (evolucao.tgi as Record<string, unknown>)?.bilirrubina as string | undefined,
+                      }}
+                    />
                   )}
 
                   {/* SISTEMAS CLÍNICOS — grid 2 colunas com cor por sistema */}

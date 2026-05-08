@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import type { DashboardRow } from '../lib/supabaseClient';
 import { supabase, type Evolucao, type Pendencia } from '../lib/supabaseClient';
-import { sofaColorClass, SYSTEM_COLORS, CLINICAL_LABELS } from '../lib/drugs';
+import { sofaColorClass, SYSTEM_COLORS, CLINICAL_LABELS, checkVitalAlert } from '../lib/drugs';
 import LeitoCard from './LeitoCard';
 import { EmptyState } from './Skeletons';
 
@@ -184,6 +184,49 @@ export default function SplitView({ patients, onOpenFull }: Props) {
             {selected.hd}
           </div>
         )}
+
+        {/* SINAIS VITAIS strip — mini PAINEL GERAL inline */}
+        {evolucao && (() => {
+          const hemo = evolucao.hemo as Record<string, unknown> | null;
+          const resp = evolucao.resp as Record<string, unknown> | null;
+          const infecto = evolucao.infecto as Record<string, unknown> | null;
+          const renal = evolucao.renal as Record<string, unknown> | null;
+          const items: { key: string; label: string; val: unknown; unit: string }[] = [
+            { key: 'pam', label: 'PAM', val: hemo?.pam ?? hemo?.pam_media, unit: '' },
+            { key: 'fc', label: 'FC', val: hemo?.fc, unit: '' },
+            { key: 'spo2', label: 'SpO₂', val: resp?.spo2, unit: '%' },
+            { key: 'tax', label: 'TAX', val: infecto?.tmax ?? infecto?.temperatura ?? infecto?.temp, unit: '°' },
+            { key: 'fr', label: 'FR', val: resp?.fr ?? resp?.fr_total, unit: '' },
+          ];
+          const filled = items.filter(i => i.val != null && i.val !== '');
+          if (filled.length === 0) return null;
+          return (
+            <div className="flex flex-wrap gap-2">
+              {filled.map(({ key, label, val, unit }) => {
+                const n = typeof val === 'string' ? parseFloat(val) : Number(val);
+                const status = !Number.isNaN(n) ? checkVitalAlert(key, n) : 'ok';
+                const color = status === 'high' ? 'text-red-400 bg-red-950/30' : status === 'low' ? 'text-sky-400 bg-sky-950/30' : 'text-app-text-2 bg-app-tertiary/50';
+                return (
+                  <div key={key} className={`flex flex-col items-center px-2 py-1 rounded-lg ${color}`}>
+                    <span className="text-[8px] font-bold uppercase opacity-70">{label}</span>
+                    <span className="text-sm font-black tabular-nums">{String(val)}{unit}</span>
+                  </div>
+                );
+              })}
+              {(() => {
+                const bh = renal?.bh ?? renal?.balanco_hidrico;
+                if (bh == null || bh === '') return null;
+                const n = typeof bh === 'string' ? parseFloat(bh) : Number(bh);
+                return (
+                  <div className={`flex flex-col items-center px-2 py-1 rounded-lg ${!Number.isNaN(n) && n > 0 ? 'text-amber-400 bg-amber-950/20' : 'text-sky-400 bg-sky-950/20'}`}>
+                    <span className="text-[8px] font-bold uppercase opacity-70">BH</span>
+                    <span className="text-sm font-black tabular-nums">{!Number.isNaN(n) && n > 0 ? '+' : ''}{String(bh)}</span>
+                  </div>
+                );
+              })()}
+            </div>
+          );
+        })()}
 
         {/* Sistemas — resumo compacto */}
         {loadingPreview ? (
