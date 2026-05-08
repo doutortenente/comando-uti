@@ -161,17 +161,17 @@ export default function SplitView({ patients, onOpenFull }: Props) {
         {/* Badge strip */}
         <div className="flex flex-wrap gap-1.5">
           {dvaCount > 0 && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded bg-rose-950 text-rose-300">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded badge-dva">
               <Heart className="w-3 h-3" /> DVA {dvaCount}
             </span>
           )}
           {sedCount > 0 && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded bg-purple-950 text-purple-300">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded badge-sed">
               <Droplets className="w-3 h-3" /> Sed {sedCount}
             </span>
           )}
           {selected.pendencias_abertas > 0 && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded bg-amber-950 text-amber-300">
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded badge-pend">
               <AlertTriangle className="w-3 h-3" /> {selected.pendencias_abertas} pend.
             </span>
           )}

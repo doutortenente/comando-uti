@@ -1,15 +1,16 @@
 // ============================================================================
-// SASI · PatientModal — 3 abas: Detalhes / Editar (read-only) / Evolução
+// SASI · PatientModal — 3 abas: Detalhes / Editar / Evolução
 // Redesign: SystemBlock com cor por sistema + labels clínicos (Gemini-style)
-// Edge-function-first: writes nunca tocam este modal — sempre via /ocr-ingest
-// com audit log (LGPD art. 46). Pendências aceitam toggle inline (RLS = user_id).
+// Editar: edição inline de identificação (pacientes) e sistemas (evolucoes).
+// Pendências aceitam toggle inline (RLS = user_id).
 // ============================================================================
 import { useEffect, useState, useCallback } from 'react';
 import {
   X, Clock, User, Activity, Heart, Droplets,
   Thermometer, Brain, Wind, Zap, FlaskConical, TestTubes,
   ClipboardList, ChevronRight, Pill, Edit3, FileText,
-  CheckCircle2, Circle, Lock, BarChart3, Bug,
+  CheckCircle2, Circle, Save, Loader2, BarChart3, Bug,
+  Plus, Trash2, Copy, Printer, Check,
 } from 'lucide-react';
 import {
   supabase,
@@ -26,6 +27,7 @@ import TimelineDrawer from './TimelineDrawer';
 import DiureseCalc from './DiureseCalc';
 import ClinicalExtras from './ClinicalExtras';
 import VitalsLabsPanel from './VitalsLabsPanel';
+import { generatePassagemTurno } from '../lib/exportText';
 
 type Tab = 'detalhes' | 'editar' | 'evolucao';
 
@@ -63,14 +65,162 @@ function Field({ label, value }: { label: string; value?: string | number | null
   );
 }
 
-function ReadField({ label, value }: { label: string; value?: string | number | null }) {
+function EditField({
+  label, value, onChange, type = 'text', placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: 'text' | 'number' | 'date';
+  placeholder?: string;
+}) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wider text-app-text-muted mb-0.5">
+      <label className="text-[10px] uppercase tracking-wider text-app-text-muted mb-0.5 block">
         {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder ?? label}
+        className="w-full px-2.5 py-1.5 rounded-lg bg-app-tertiary border border-app-border/50 text-xs text-app-text-2 min-h-[28px] focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent transition placeholder:text-app-text-muted/40"
+      />
+    </div>
+  );
+}
+
+function EditTextarea({
+  label, value, onChange, rows = 2, placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  rows?: number;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <label className="text-[10px] uppercase tracking-wider text-app-text-muted mb-0.5 block">
+        {label}
+      </label>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        placeholder={placeholder ?? label}
+        className="w-full px-2.5 py-1.5 rounded-lg bg-app-tertiary border border-app-border/50 text-xs text-app-text-2 focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent transition resize-y placeholder:text-app-text-muted/40"
+      />
+    </div>
+  );
+}
+
+function EditSelect({
+  label, value, onChange, options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div>
+      <label className="text-[10px] uppercase tracking-wider text-app-text-muted mb-0.5 block">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-2.5 py-1.5 rounded-lg bg-app-tertiary border border-app-border/50 text-xs text-app-text-2 min-h-[28px] focus:outline-none focus:ring-1 focus:ring-app-accent focus:border-app-accent transition"
+      >
+        {options.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function EditableSystemBlock({
+  systemKey, data, labels, onChange,
+}: {
+  systemKey: string;
+  data: Record<string, unknown>;
+  labels: Record<string, string>;
+  onChange: (updated: Record<string, unknown>) => void;
+}) {
+  const color = SYSTEM_COLORS[systemKey];
+  const Icon = SYSTEM_ICONS[systemKey] ?? Activity;
+  const name = SYSTEM_NAMES[systemKey] ?? systemKey;
+
+  const entries = Object.entries(data);
+  const [newKey, setNewKey] = useState('');
+
+  function updateField(key: string, val: string) {
+    onChange({ ...data, [key]: val === '' ? null : val });
+  }
+
+  function removeField(key: string) {
+    const copy = { ...data };
+    delete copy[key];
+    onChange(copy);
+  }
+
+  function addField() {
+    const k = newKey.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!k || data[k] != null) return;
+    onChange({ ...data, [k]: '' });
+    setNewKey('');
+  }
+
+  return (
+    <div className={`sys-${systemKey} rounded-r-xl border-l-4 p-3 ${color?.border ?? ''} ${color?.bg ?? 'bg-app-card'}`}>
+      <div className={`sys-title flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-2 pb-2 border-b border-app-border/30 ${color?.text ?? 'text-app-text-muted'}`}>
+        <Icon className="w-3.5 h-3.5" />
+        {name}
+        <span className="text-[9px] font-normal opacity-60 ml-auto">{entries.length} campos</span>
       </div>
-      <div className="px-2.5 py-1.5 rounded-lg bg-app-tertiary text-xs text-app-text-2 min-h-[28px]">
-        {value == null || value === '' ? '—' : String(value)}
+      <div className="space-y-1.5">
+        {entries.map(([k, v]) => {
+          const label = labels[k] ?? k.replace(/_/g, ' ');
+          return (
+            <div key={k} className="flex items-center gap-1.5">
+              <span className="text-[10px] text-app-text-muted w-24 shrink-0 truncate" title={label}>
+                {label}
+              </span>
+              <input
+                type="text"
+                value={v == null ? '' : String(v)}
+                onChange={(e) => updateField(k, e.target.value)}
+                className="flex-1 px-2 py-1 rounded bg-app-tertiary/80 border border-app-border/30 text-xs text-app-text-2 focus:outline-none focus:ring-1 focus:ring-app-accent transition"
+              />
+              <button
+                onClick={() => removeField(k)}
+                className="p-0.5 text-app-text-muted/40 hover:text-red-400 transition"
+                title="Remover campo"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          );
+        })}
+        <div className="flex items-center gap-1.5 pt-1 border-t border-app-border/20">
+          <input
+            type="text"
+            value={newKey}
+            onChange={(e) => setNewKey(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addField()}
+            placeholder="novo campo..."
+            className="flex-1 px-2 py-1 rounded bg-app-tertiary/50 border border-dashed border-app-border/30 text-[10px] text-app-text-muted focus:outline-none focus:ring-1 focus:ring-app-accent transition placeholder:text-app-text-muted/30"
+          />
+          <button
+            onClick={addField}
+            className="p-0.5 text-app-text-muted/40 hover:text-emerald-400 transition"
+            title="Adicionar campo"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -145,6 +295,93 @@ function ClinicalSystemBlock({
   );
 }
 
+// ── Evolução tab ──────────────────────────────────────────────────────────
+
+function EvolucaoTab({
+  pacienteId, evolucao, onCreated,
+}: {
+  pacienteId: string;
+  evolucao: Evolucao | null;
+  onCreated: () => void;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [plantao, setPlantao] = useState(() => {
+    const h = new Date().getHours();
+    return h >= 7 && h < 13 ? 'MANHÃ' : h >= 13 && h < 19 ? 'TARDE' : 'NOITE';
+  });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function criarEvolucao() {
+    setCreating(true);
+    setMsg(null);
+
+    const { error } = await supabase.from('evolucoes').insert({
+      paciente_id: pacienteId,
+      data_evolucao: new Date().toISOString(),
+      plantao,
+      neuro: {}, resp: {}, hemo: {}, tgi: {},
+      renal: {}, hemato: {}, infecto: {},
+      dvas: [], sedativos: [],
+      impressao: [], conduta: [],
+      sofa_snapshot: {},
+    });
+
+    if (error) {
+      setMsg({ ok: false, text: `Erro: ${error.message}` });
+    } else {
+      setMsg({ ok: true, text: 'Evolução criada! Edite na aba Editar.' });
+      onCreated();
+    }
+    setCreating(false);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg bg-app-tertiary border border-app-border">
+        <div className="flex items-center gap-2 font-semibold text-app-text text-sm mb-3">
+          <FileText className="w-4 h-4" />
+          Nova evolução
+        </div>
+        <div className="flex items-end gap-3">
+          <EditSelect
+            label="Plantão"
+            value={plantao}
+            onChange={setPlantao}
+            options={[
+              { value: 'MANHÃ', label: 'Manhã (07-13h)' },
+              { value: 'TARDE', label: 'Tarde (13-19h)' },
+              { value: 'NOITE', label: 'Noite (19-07h)' },
+            ]}
+          />
+          <button
+            onClick={criarEvolucao}
+            disabled={creating}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent hover:bg-app-accent-hover disabled:opacity-50 text-white text-sm font-semibold transition h-[34px]"
+          >
+            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {creating ? 'Criando...' : 'Criar evolução'}
+          </button>
+        </div>
+        {msg && (
+          <div className={`mt-2 text-xs font-medium ${msg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+            {msg.text}
+          </div>
+        )}
+      </div>
+
+      {evolucao && (
+        <div className="text-[11px] text-app-text-muted border-t border-app-border pt-3">
+          <span className="font-semibold">Última evolução:</span>{' '}
+          {new Date(evolucao.created_at).toLocaleString('pt-BR')} · Plantão: {evolucao.plantao}
+          <p className="mt-1 text-app-text-muted/60">
+            Após criar, edite os sistemas clínicos na aba <strong>Editar</strong>.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── main component ─────────────────────────────────────────────────────────
 
 export default function PatientModal({ pacienteId, onClose }: Props) {
@@ -155,6 +392,7 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
   const [sofaHistory, setSofaHistory] = useState<EventoClinico[]>([]);
   const [loading, setLoading] = useState(true);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -251,6 +489,103 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
     .map((e) => e.valor_num)
     .filter((v): v is number => typeof v === 'number');
 
+  // ── Editar tab state ──
+  const [pacDraft, setPacDraft] = useState<Record<string, string>>({});
+  const [evolDraft, setEvolDraft] = useState<Record<string, Record<string, unknown>>>({});
+  const [impressaoDraft, setImpressaoDraft] = useState<string[]>([]);
+  const [condutaDraft, setCondutaDraft] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!paciente) return;
+    setPacDraft({
+      nome: paciente.nome ?? '',
+      uti: paciente.uti ?? '',
+      leito: paciente.leito ?? '',
+      idade: paciente.idade != null ? String(paciente.idade) : '',
+      peso: paciente.peso != null ? String(paciente.peso) : '',
+      altura: paciente.altura != null ? String(paciente.altura) : '',
+      alergias: paciente.alergias ?? '',
+      hd: paciente.hd ?? '',
+      gravidade: paciente.gravidade ?? 'estavel',
+      status_leito: paciente.status_leito ?? 'ativo',
+    });
+  }, [paciente]);
+
+  useEffect(() => {
+    if (!evolucao) { setEvolDraft({}); setImpressaoDraft([]); setCondutaDraft([]); return; }
+    const draft: Record<string, Record<string, unknown>> = {};
+    for (const sys of ['neuro', 'resp', 'hemo', 'tgi', 'renal', 'hemato', 'infecto'] as const) {
+      draft[sys] = { ...(evolucao[sys] as Record<string, unknown> ?? {}) };
+    }
+    setEvolDraft(draft);
+    setImpressaoDraft([...(evolucao.impressao as string[] ?? [])]);
+    setCondutaDraft([...(evolucao.conduta as string[] ?? [])]);
+  }, [evolucao]);
+
+  async function handleSave() {
+    if (!paciente) return;
+    setSaving(true);
+    setSaveMsg(null);
+
+    const pacUpdate: Record<string, unknown> = {
+      nome: pacDraft.nome || paciente.nome,
+      uti: pacDraft.uti || paciente.uti,
+      leito: pacDraft.leito || paciente.leito,
+      idade: pacDraft.idade ? Number(pacDraft.idade) : null,
+      peso: pacDraft.peso ? Number(pacDraft.peso) : null,
+      altura: pacDraft.altura ? Number(pacDraft.altura) : null,
+      alergias: pacDraft.alergias || null,
+      hd: pacDraft.hd || null,
+      gravidade: pacDraft.gravidade,
+      status_leito: pacDraft.status_leito,
+    };
+
+    const { error: pacErr } = await supabase
+      .from('pacientes')
+      .update(pacUpdate)
+      .eq('id', paciente.id);
+
+    if (pacErr) {
+      setSaveMsg({ ok: false, text: `Erro ao salvar paciente: ${pacErr.message}` });
+      setSaving(false);
+      return;
+    }
+
+    if (evolucao) {
+      const cleanDraft: Record<string, unknown> = {};
+      for (const [sys, fields] of Object.entries(evolDraft)) {
+        const cleaned: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(fields)) {
+          if (v != null && v !== '') cleaned[k] = v;
+        }
+        cleanDraft[sys] = cleaned;
+      }
+      const evolUpdate = {
+        ...cleanDraft,
+        impressao: impressaoDraft.filter(s => s.trim() !== ''),
+        conduta: condutaDraft.filter(s => s.trim() !== ''),
+      };
+
+      const { error: evolErr } = await supabase
+        .from('evolucoes')
+        .update(evolUpdate)
+        .eq('id', evolucao.id);
+
+      if (evolErr) {
+        setSaveMsg({ ok: false, text: `Paciente salvo, mas erro na evolução: ${evolErr.message}` });
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaveMsg({ ok: true, text: 'Salvo com sucesso!' });
+    setSaving(false);
+    void load();
+    setTimeout(() => setSaveMsg(null), 3000);
+  }
+
   const TABS: { key: Tab; label: string; Icon: typeof Edit3 }[] = [
     { key: 'detalhes', label: 'Detalhes', Icon: User },
     { key: 'editar', label: 'Editar', Icon: Edit3 },
@@ -318,13 +653,36 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                         {paciente.peso}kg
                       </span>
                     )}
-                    <button
-                      onClick={() => setShowTimeline(true)}
-                      className="flex items-center gap-1 ml-auto px-2 py-1 rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-muted hover:text-app-text-2 text-[11px] font-medium transition"
-                    >
-                      <BarChart3 className="w-3 h-3" />
-                      Timeline
-                    </button>
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <button
+                        onClick={() => {
+                          const text = generatePassagemTurno(paciente, evolucao, pendencias);
+                          navigator.clipboard.writeText(text).then(() => {
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          });
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-muted hover:text-app-text-2 text-[11px] font-medium transition"
+                        title="Copiar passagem de turno"
+                      >
+                        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        {copied ? 'Copiado!' : 'Copiar'}
+                      </button>
+                      <button
+                        onClick={() => window.print()}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-muted hover:text-app-text-2 text-[11px] font-medium transition"
+                        title="Imprimir"
+                      >
+                        <Printer className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setShowTimeline(true)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-muted hover:text-app-text-2 text-[11px] font-medium transition"
+                      >
+                        <BarChart3 className="w-3 h-3" />
+                        Timeline
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -614,113 +972,250 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                 </div>
               )}
 
-              {/* ═══════════ TAB: EDITAR (read-only) ═══════════ */}
+              {/* ═══════════ TAB: EDITAR ═══════════ */}
               {tab === 'editar' && (
                 <div className="space-y-4">
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-950/30 border border-amber-900 text-amber-200 text-xs">
-                    <Lock className="w-4 h-4 shrink-0 mt-0.5" />
-                    <div>
-                      <strong>Modo somente-leitura.</strong> Edição de evoluções acontece via skill{' '}
-                      <code className="bg-amber-950/60 px-1 py-0.5 rounded">sasi-ingest-export</code>{' '}
-                      ou pela edge function{' '}
-                      <code className="bg-amber-950/60 px-1 py-0.5 rounded">/ocr-ingest</code>, com
-                      audit log (LGPD art. 46). Esta aba mostra todos os campos pra revisão.
-                    </div>
+                  {/* Save bar */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-app-tertiary/50 border border-app-border sticky top-0 z-10">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent hover:bg-app-accent-hover disabled:opacity-50 text-white text-sm font-semibold transition"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {saving ? 'Salvando...' : 'Salvar alterações'}
+                    </button>
+                    {saveMsg && (
+                      <span className={`text-xs font-medium ${saveMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {saveMsg.text}
+                      </span>
+                    )}
+                    <span className="text-[10px] text-app-text-muted ml-auto">
+                      Edite os campos abaixo e clique Salvar
+                    </span>
                   </div>
 
+                  {/* IDENTIFICAÇÃO */}
                   <div>
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-app-text-muted mb-2">
                       <User className="w-3.5 h-3.5" />
                       Identificação
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <ReadField label="UTI" value={paciente.uti} />
-                      <ReadField label="Leito" value={paciente.leito} />
-                      <ReadField label="Gravidade" value={paciente.gravidade} />
-                      <ReadField label="Idade" value={paciente.idade ?? null} />
-                      <ReadField label="Peso (kg)" value={paciente.peso ?? null} />
-                      <ReadField label="Altura (cm)" value={paciente.altura ?? null} />
-                      <ReadField label="Alergias" value={paciente.alergias ?? 'NKDA'} />
-                      <ReadField
-                        label="Data adm"
-                        value={new Date(paciente.data_adm).toLocaleDateString('pt-BR')}
+                      <EditField
+                        label="Nome"
+                        value={pacDraft.nome ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, nome: v }))}
                       />
-                      <ReadField label="Status leito" value={paciente.status_leito} />
+                      <EditSelect
+                        label="UTI"
+                        value={pacDraft.uti ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, uti: v }))}
+                        options={[
+                          { value: 'UTI2', label: 'UTI 2' },
+                          { value: 'UTI3', label: 'UTI 3' },
+                          { value: 'UTI4', label: 'UTI 4' },
+                        ]}
+                      />
+                      <EditField
+                        label="Leito"
+                        value={pacDraft.leito ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, leito: v }))}
+                      />
+                      <EditSelect
+                        label="Gravidade"
+                        value={pacDraft.gravidade ?? 'estavel'}
+                        onChange={(v) => setPacDraft(d => ({ ...d, gravidade: v }))}
+                        options={[
+                          { value: 'estavel', label: 'Estável' },
+                          { value: 'moderado', label: 'Moderado' },
+                          { value: 'grave', label: 'Grave' },
+                          { value: 'critico', label: 'Crítico' },
+                          { value: 'obito', label: 'Óbito' },
+                        ]}
+                      />
+                      <EditField
+                        label="Idade"
+                        value={pacDraft.idade ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, idade: v }))}
+                        type="number"
+                        placeholder="anos"
+                      />
+                      <EditField
+                        label="Peso (kg)"
+                        value={pacDraft.peso ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, peso: v }))}
+                        type="number"
+                        placeholder="kg"
+                      />
+                      <EditField
+                        label="Altura (cm)"
+                        value={pacDraft.altura ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, altura: v }))}
+                        type="number"
+                        placeholder="cm"
+                      />
+                      <EditField
+                        label="Alergias"
+                        value={pacDraft.alergias ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, alergias: v }))}
+                        placeholder="NKDA"
+                      />
+                      <EditSelect
+                        label="Status leito"
+                        value={pacDraft.status_leito ?? 'ativo'}
+                        onChange={(v) => setPacDraft(d => ({ ...d, status_leito: v }))}
+                        options={[
+                          { value: 'ativo', label: 'Ativo' },
+                          { value: 'alta', label: 'Alta' },
+                          { value: 'obito', label: 'Óbito' },
+                          { value: 'transferencia', label: 'Transferência' },
+                        ]}
+                      />
                     </div>
                     <div className="mt-3">
-                      <ReadField label="HD" value={paciente.hd ?? null} />
+                      <EditTextarea
+                        label="HD (Hipótese Diagnóstica)"
+                        value={pacDraft.hd ?? ''}
+                        onChange={(v) => setPacDraft(d => ({ ...d, hd: v }))}
+                        rows={3}
+                        placeholder="Diagnóstico principal e comorbidades..."
+                      />
                     </div>
                   </div>
 
-                  {evolucao && (
+                  {/* SISTEMAS CLÍNICOS — editáveis */}
+                  {evolucao ? (
                     <>
                       <div>
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-app-text-muted mb-2">
                           <Pill className="w-3.5 h-3.5" />
-                          Última evolução
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <ReadField label="Plantão" value={evolucao.plantao} />
-                          <ReadField
-                            label="Data"
-                            value={new Date(evolucao.data_evolucao).toLocaleString('pt-BR')}
-                          />
+                          Evolução — sistemas clínicos
+                          <span className="text-[9px] font-normal opacity-60 ml-2">
+                            ({new Date(evolucao.data_evolucao).toLocaleDateString('pt-BR')} · {evolucao.plantao})
+                          </span>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                         {SYSTEMS.map((sys) => (
-                          <ClinicalSystemBlock
+                          <EditableSystemBlock
                             key={sys}
                             systemKey={sys}
-                            data={evolucao[sys] as Record<string, unknown>}
+                            data={evolDraft[sys] ?? {}}
+                            labels={CLINICAL_LABELS[sys] ?? {}}
+                            onChange={(updated) => setEvolDraft(d => ({ ...d, [sys]: updated }))}
                           />
                         ))}
                       </div>
+
+                      {/* IMPRESSÃO */}
+                      <div className="rounded-r-xl border-l-4 border-l-red-500 bg-red-950/10 p-3">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-red-300 mb-2">
+                          <ClipboardList className="w-3.5 h-3.5" />
+                          Problemas Ativos / Impressão
+                        </div>
+                        <div className="space-y-1.5">
+                          {impressaoDraft.map((item, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-red-400 font-bold text-xs shrink-0">{i + 1}.</span>
+                              <input
+                                type="text"
+                                value={item}
+                                onChange={(e) => {
+                                  const copy = [...impressaoDraft];
+                                  copy[i] = e.target.value;
+                                  setImpressaoDraft(copy);
+                                }}
+                                className="flex-1 px-2 py-1 rounded bg-app-tertiary/80 border border-app-border/30 text-xs text-app-text-2 focus:outline-none focus:ring-1 focus:ring-app-accent transition"
+                              />
+                              <button
+                                onClick={() => setImpressaoDraft(impressaoDraft.filter((_, j) => j !== i))}
+                                className="p-0.5 text-app-text-muted/40 hover:text-red-400 transition"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => setImpressaoDraft([...impressaoDraft, ''])}
+                            className="flex items-center gap-1 text-[10px] text-app-text-muted hover:text-red-300 transition pt-1"
+                          >
+                            <Plus className="w-3 h-3" /> Adicionar problema
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* CONDUTA */}
+                      <div className="rounded-r-xl border-l-4 border-l-emerald-500 bg-emerald-950/10 p-3">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-300 mb-2">
+                          <ChevronRight className="w-3.5 h-3.5" />
+                          Plano / Conduta
+                        </div>
+                        <div className="space-y-1.5">
+                          {condutaDraft.map((item, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-emerald-400 font-bold text-xs shrink-0">{i + 1}.</span>
+                              <input
+                                type="text"
+                                value={item}
+                                onChange={(e) => {
+                                  const copy = [...condutaDraft];
+                                  copy[i] = e.target.value;
+                                  setCondutaDraft(copy);
+                                }}
+                                className="flex-1 px-2 py-1 rounded bg-app-tertiary/80 border border-app-border/30 text-xs text-app-text-2 focus:outline-none focus:ring-1 focus:ring-app-accent transition"
+                              />
+                              <button
+                                onClick={() => setCondutaDraft(condutaDraft.filter((_, j) => j !== i))}
+                                className="p-0.5 text-app-text-muted/40 hover:text-red-400 transition"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => setCondutaDraft([...condutaDraft, ''])}
+                            className="flex items-center gap-1 text-[10px] text-app-text-muted hover:text-emerald-300 transition pt-1"
+                          >
+                            <Plus className="w-3 h-3" /> Adicionar conduta
+                          </button>
+                        </div>
+                      </div>
                     </>
+                  ) : (
+                    <EmptyState
+                      icon={FileText}
+                      title="Nenhuma evolução registrada"
+                      description="Crie uma evolução na aba Evolução para editar sistemas clínicos."
+                    />
                   )}
+
+                  {/* Bottom save */}
+                  <div className="flex items-center gap-3 pt-2 border-t border-app-border">
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent hover:bg-app-accent-hover disabled:opacity-50 text-white text-sm font-semibold transition"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      {saving ? 'Salvando...' : 'Salvar alterações'}
+                    </button>
+                    {saveMsg && (
+                      <span className={`text-xs font-medium ${saveMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {saveMsg.text}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* ═══════════ TAB: EVOLUÇÃO ═══════════ */}
               {tab === 'evolucao' && (
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg bg-app-tertiary border border-app-border text-sm text-app-text-2 leading-relaxed">
-                    <div className="flex items-center gap-2 font-semibold text-app-text mb-2">
-                      <FileText className="w-4 h-4" />
-                      Nova evolução
-                    </div>
-                    <p>
-                      A criação de novas evoluções acontece <strong>fora deste modal</strong> por
-                      motivos de auditoria e LGPD (art. 46).
-                    </p>
-                    <ul className="mt-3 space-y-1.5 text-xs text-app-text-muted">
-                      <li>
-                        · Use a skill{' '}
-                        <code className="bg-app-card px-1.5 py-0.5 rounded">
-                          sasi-ingest-export
-                        </code>{' '}
-                        no Claude pra parsing estruturado
-                      </li>
-                      <li>
-                        · Ou poste um print no canal e a edge function{' '}
-                        <code className="bg-app-card px-1.5 py-0.5 rounded">/ocr-ingest</code> faz o
-                        resto com audit log
-                      </li>
-                      <li>
-                        · Toda escrita é registrada em{' '}
-                        <code className="bg-app-card px-1.5 py-0.5 rounded">audit_log</code> (RLS +
-                        service role)
-                      </li>
-                    </ul>
-                  </div>
-
-                  {evolucao && (
-                    <div className="text-[11px] text-app-text-muted text-right border-t border-app-border pt-3">
-                      Última evolução: {new Date(evolucao.created_at).toLocaleString('pt-BR')} ·
-                      Plantão: {evolucao.plantao}
-                    </div>
-                  )}
-                </div>
+                <EvolucaoTab
+                  pacienteId={pacienteId}
+                  evolucao={evolucao}
+                  onCreated={load}
+                />
               )}
             </div>
           </>

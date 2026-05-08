@@ -145,9 +145,58 @@ body.theme-clinical .sys-renal .sys-title,   body.theme-light .sys-renal .sys-ti
 body.theme-clinical .sys-hemato .sys-title,  body.theme-light .sys-hemato .sys-title  { color:#be185d; }
 body.theme-clinical .sys-infecto .sys-title, body.theme-light .sys-infecto .sys-title { color:#0f766e; }
 
-/* Card gravity left-border accent (Gemini-style) */
-.card-grav-estavel  { border-left: 4px solid #10b981; }
-.card-grav-moderado { border-left: 4px solid #f59e0b; }
-.card-grav-grave    { border-left: 4px solid #f97316; }
-.card-grav-critico  { border-left: 4px solid #dc2626; }
-.card-grav-obito    { border-left: 4px solid #475569; }
+/* Card gravity left-border accent (Gemini-style, 8px thick) */
+.card-grav-estavel  { border-left: 8px solid #10b981; background: rgba(16,185,129,.06); }
+.card-grav-moderado { border-left: 8px solid #f59e0b; background: rgba(245,158,11,.06); }
+.card-grav-grave    { border-left: 8px solid #f97316; background: rgba(249,115,22,.06); }
+.card-grav-critico  { border-left: 8px solid #dc2626; background: rgba(220,38,38,.08); }
+.card-grav-obito    { border-left: 8px solid #475569; background: rgba(71,85,105,.06); }
+
+body.theme-clinical .card-grav-estavel,
+body.theme-light    .card-grav-estavel  { background: rgba(16,185,129,.08); }
+body.theme-clinical .card-grav-moderado,
+body.theme-light    .card-grav-moderado { background: rgba(245,158,11,.08); }
+body.theme-clinical .card-grav-grave,
+body.theme-light    .card-grav-grave    { background: rgba(249,115,22,.08); }
+body.theme-clinical .card-grav-critico,
+body.theme-light    .card-grav-critico  { background: rgba(220,38,38,.10); }
+body.theme-clinical .card-grav-obito,
+body.theme-light    .card-grav-obito    { background: rgba(71,85,105,.08); }
+
+/* ============================================================================
+   Clinical badge pills (theme-aware for light/clinical)
+   ============================================================================ */
+.badge-dva     { background: rgba(136,19,55,.45); color: #fda4af; }
+.badge-sed     { background: rgba(88,28,135,.45); color: #d8b4fe; }
+.badge-vm      { background: rgba(12,74,110,.45); color: #7dd3fc; }
+.badge-vni     { background: rgba(12,74,110,.25); color: #38bdf8; border: 1px solid rgba(56,189,248,.25); }
+.badge-atb     { background: rgba(19,78,74,.45);  color: #5eead4; }
+.badge-pend    { background: rgba(120,53,15,.45); color: #fcd34d; }
+.badge-sofa-hi { background: rgba(124,45,18,.35); color: #fdba74; }
+.badge-sofa-lo { background: rgb(var(--app-tertiary)); color: rgb(var(--app-text-muted)); }
+.badge-sepsis  { background: #dc2626; color: white; }
+
+body.theme-clinical .badge-dva,
+body.theme-light    .badge-dva     { background: #ffe4e6; color: #9f1239; }
+body.theme-clinical .badge-sed,
+body.theme-light    .badge-sed     { background: #f3e8ff; color: #6b21a8; }
+body.theme-clinical .badge-vm,
+body.theme-light    .badge-vm      { background: #e0f2fe; color: #0c4a6e; }
+body.theme-clinical .badge-vni,
+body.theme-light    .badge-vni     { background: #f0f9ff; color: #0369a1; border-color: #bae6fd; }
+body.theme-clinical .badge-atb,
+body.theme-light    .badge-atb     { background: #ccfbf1; color: #115e59; }
+body.theme-clinical .badge-pend,
+body.theme-light    .badge-pend    { background: #fef3c7; color: #92400e; }
+body.theme-clinical .badge-sofa-hi,
+body.theme-light    .badge-sofa-hi { background: #fff7ed; color: #9a3412; }
+body.theme-clinical .badge-sepsis,
+body.theme-light    .badge-sepsis  { background: #dc2626; color: white; }
+
+/* Drug name inline colors (theme-aware) */
+.drug-dva  { color: #fda4af; }
+.drug-sed  { color: #d8b4fe; }
+body.theme-clinical .drug-dva,
+body.theme-light    .drug-dva  { color: #be123c; }
+body.theme-clinical .drug-sed,
+body.theme-light    .drug-sed  { color: #7e22ce; }
