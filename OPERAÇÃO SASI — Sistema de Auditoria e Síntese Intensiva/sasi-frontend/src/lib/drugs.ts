@@ -234,6 +234,30 @@ export function calculateDose(
 }
 
 // ============================================================================
+// HELPERS DE ALERTA CLÍNICO (espelha Gemini isHigh/isLow)
+// ============================================================================
+export function isHigh(v1: unknown, v2: unknown, threshold: number): boolean {
+  const a = parseFloat(String(v1 ?? ''));
+  const b = parseFloat(String(v2 ?? ''));
+  return (!Number.isNaN(a) && a > threshold) || (!Number.isNaN(b) && b > threshold);
+}
+
+export function isLow(v1: unknown, v2: unknown, threshold: number): boolean {
+  const a = parseFloat(String(v1 ?? ''));
+  const b = parseFloat(String(v2 ?? ''));
+  return (!Number.isNaN(a) && a < threshold) || (!Number.isNaN(b) && b < threshold);
+}
+
+/** Versão "string" de calcDiureseEfetiva pra display inline na ficha */
+export function formatDiureseEfetiva(diurese: unknown, peso: unknown, horas: unknown = 24): string {
+  const d = parseFloat(String(diurese ?? ''));
+  const p = parseFloat(String(peso ?? ''));
+  const h = parseFloat(String(horas ?? '24'));
+  if (Number.isNaN(d) || Number.isNaN(p) || Number.isNaN(h) || p === 0 || h === 0) return '___';
+  return (d / p / h).toFixed(2);
+}
+
+// ============================================================================
 // ESCALAS NEUROLÓGICAS — referência inline pra uso no modal
 // ============================================================================
 export interface EscalaDef {
