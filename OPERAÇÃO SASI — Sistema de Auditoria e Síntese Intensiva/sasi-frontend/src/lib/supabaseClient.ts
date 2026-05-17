@@ -46,6 +46,21 @@ export interface Paciente {
   status_leito: 'ativo' | 'alta' | 'obito' | 'transferencia';
   created_at: string;
   updated_at: string;
+  /** Onda 5: dispositivos em uso ({mv,dva,sed,atb,cvc,trr} booleans). */
+  dispositivos?: {
+    mv?: boolean;
+    dva?: boolean;
+    sed?: boolean;
+    atb?: boolean;
+    cvc?: boolean;
+    trr?: boolean;
+  };
+  /** Onda 5: precaução de isolamento. */
+  isolation?: 'none' | 'contact' | 'droplet' | 'aerosol';
+  /** Onda 5: nº de valores fora do range clínico. */
+  out_of_range_count?: number;
+  /** Onda 5: semáforo clínico explícito. */
+  severidade_visual?: 'red' | 'yellow' | 'green';
 }
 
 export interface Evolucao {
@@ -125,4 +140,10 @@ export interface DashboardRow {
   pendencias_abertas: number;
   /** Onda 5: nº de valores fora do range. Badge ⚠️ no LeitoCard compact. */
   out_of_range_count?: number;
+  /** Onda 5: dispositivos (espelhado da view). */
+  dispositivos?: Record<string, boolean>;
+  /** Onda 5: precaução de isolamento (espelhado da view). */
+  isolation?: 'none' | 'contact' | 'droplet' | 'aerosol';
+  /** Onda 5: semáforo clínico (espelhado da view). */
+  severidade_visual?: 'red' | 'yellow' | 'green';
 }
