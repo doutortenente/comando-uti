@@ -1,0 +1,12 @@
+[build]
+  base    = "OPERAÇÃO SASI — Sistema de Auditoria e Síntese Intensiva/sasi-frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
