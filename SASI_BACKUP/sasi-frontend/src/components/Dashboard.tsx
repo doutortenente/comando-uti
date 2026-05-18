@@ -38,7 +38,7 @@ function loadActiveUTI(): ActiveUTI {
 }
 
 export default function Dashboard({ session }: Props) {
-  const { dashboard, loading, error, updatePatient } = useSupabasePatients();
+  const { dashboard, loading, error } = useSupabasePatients();
   const { totalCriticos, totalWarnings } = useClinicalAlerts();
   const { addToast } = useToasts();
   const { viewMode, setViewMode, cycleTheme } = useUI();
@@ -266,7 +266,7 @@ export default function Dashboard({ session }: Props) {
             {viewMode === 'plantao' && (
               <div className={`grid gap-3 ${isCompactView ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
                 {visible.map((row) => (
-                  <LeitoCard key={row.paciente_id} row={row} onSelect={setSelectedId} compact={isCompactView} onUpdatePatient={updatePatient} />
+                  <LeitoCard key={row.paciente_id} row={row} onSelect={setSelectedId} compact={isCompactView} />
                 ))}
               </div>
             )}
