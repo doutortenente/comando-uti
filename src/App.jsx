@@ -8,6 +8,30 @@ import {
   Cloud, CloudOff, Download
 } from 'lucide-react';
 
+const toArray = (v) => (Array.isArray(v) ? v : []);
+
+class FichaErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { erro: null }; }
+  static getDerivedStateFromError(erro) { return { erro }; }
+  componentDidCatch(erro, info) { console.error('SASI ficha:', erro, info); }
+  render() {
+    if (this.state.erro) {
+      return (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-300">
+          <p className="font-bold mb-1">Esta seção falhou ao carregar.</p>
+          <p className="opacity-80 mb-3">O resto da ficha segue utilizável.</p>
+          <button
+            onClick={() => this.setState({ erro: null })}
+            className="px-3 py-1 rounded-md bg-red-500/20 hover:bg-red-500/30 transition">
+            Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ==========================================
 // CONFIGURAÇÃO SUPABASE (NUVEM TÁTICA)
 // ==========================================
@@ -134,6 +158,16 @@ const getInitialState = (uti = 'UTI 2', id = null) => ({
   pendencias: [{ checked: false, text: '' }, { checked: false, text: '' }, { checked: false, text: '' }]
 });
 
+const normalizeInfecto = (infecto) => {
+  const base = getInitialState().infecto;
+  return {
+    ...base,
+    ...(infecto || {}),
+    atbs: Array.isArray(infecto?.atbs) ? infecto.atbs : [],
+    culturas: Array.isArray(infecto?.culturas) ? infecto.culturas : [],
+  };
+};
+
 const getClinicalIntelligence = (p) => {
   let sofa = 0;
   let sofaDet = [];
@@ -199,7 +233,7 @@ const getClinicalIntelligence = (p) => {
   }
 
   // Sepsis Check
-  let hasInfec = (p.infecto.atbs && p.infecto.atbs.length > 0) || parseFloat(p.infecto.tmax) > 38 || parseFloat(p.infecto.leuco1) > 12000 || (p.infecto.culturas && p.infecto.culturas.length > 0);
+  let hasInfec = toArray(p.infecto.atbs).length > 0 || parseFloat(p.infecto.tmax) > 38 || parseFloat(p.infecto.leuco1) > 12000 || toArray(p.infecto.culturas).length > 0;
   let isSeptic = hasInfec && sofa >= 2;
 
   // Campos em falta
@@ -288,8 +322,8 @@ const generateSinglePatientText = (d) => {
     return `${inf.droga} - Vazão: ${inf.vazao || '___'} ml/h${doseData && !doseData.error ? ` -> [ ${doseData.value} ${doseData.unit} ]` : ''}`;
   }).filter(Boolean).join('\n      ') : 'Nenhuma';
 
-  const atbsText = d.infecto.atbs.length > 0 ? d.infecto.atbs.map(a => `${a.nome === 'Outro' ? a.nomePersonalizado : a.nome || '___'} ${a.dose ? `(${a.dose})` : ''} ${a.dias ? `- D${a.dias}` : ''}`).filter(Boolean).join('\n     ') : 'Nenhum';
-  const culturasText = d.infecto.culturas.map(c => `- ${c.tipo || '___'} (${c.data || '__/__'}): ${c.status || '___'}${((c.status === 'Parcial positiva' || c.status === 'Positiva') && c.detalhe) ? ` -> ${c.detalhe}` : ''}`).join('\n');
+  const atbsText = toArray(d.infecto.atbs).length > 0 ? toArray(d.infecto.atbs).map(a => `${a.nome === 'Outro' ? a.nomePersonalizado : a.nome || '___'} ${a.dose ? `(${a.dose})` : ''} ${a.dias ? `- D${a.dias}` : ''}`).filter(Boolean).join('\n     ') : 'Nenhum';
+  const culturasText = toArray(d.infecto.culturas).map(c => `- ${c.tipo || '___'} (${c.data || '__/__'}): ${c.status || '___'}${((c.status === 'Parcial positiva' || c.status === 'Positiva') && c.detalhe) ? ` -> ${c.detalhe}` : ''}`).join('\n');
   const printNotas = (notas) => notas ? `\n   ↳ Notas: ${notas}` : '';
 
   return `# PASSAGEM DE TURNO - ${d.uti || 'UTI 2'}
@@ -619,13 +653,18 @@ export default function App() {
             ...base,
             ...p,
             id: Math.random().toString(36).substring(2, 9),
+            dvas:       Array.isArray(p.dvas)       ? p.dvas       : base.dvas,
+            sedativos:  Array.isArray(p.sedativos)  ? p.sedativos  : base.sedativos,
+            impressao:  Array.isArray(p.impressao)  ? p.impressao  : base.impressao,
+            conduta:    Array.isArray(p.conduta)    ? p.conduta    : base.conduta,
+            pendencias: Array.isArray(p.pendencias) ? p.pendencias : base.pendencias,
             neuro: { ...base.neuro, ...(p.neuro || {}) },
             resp: { ...base.resp, ...(p.resp || {}) },
             hemo: { ...base.hemo, ...(p.hemo || {}) },
             tgi: { ...base.tgi, ...(p.tgi || {}) },
             renal: { ...base.renal, ...(p.renal || {}) },
             hemato: { ...base.hemato, ...(p.hemato || {}) },
-            infecto: { ...base.infecto, ...(p.infecto || {}) }
+            infecto: normalizeInfecto(p.infecto)
           };
         });
 
@@ -1068,18 +1107,18 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
   };
 
   const addCultura = () => {
-    const newCults = [...(data.infecto.culturas || []), { tipo: '', data: '', status: '', detalhe: '' }];
+    const newCults = [...toArray(data.infecto.culturas), { tipo: '', data: '', status: '', detalhe: '' }];
     updatePatientObj({ ...data, infecto: { ...data.infecto, culturas: newCults } });
   };
 
   const removeCultura = (index) => {
-    const newCults = [...data.infecto.culturas];
+    const newCults = [...toArray(data.infecto.culturas)];
     newCults.splice(index, 1);
     updatePatientObj({ ...data, infecto: { ...data.infecto, culturas: newCults } });
   };
 
   const updateCultura = (index, field, value) => {
-    const newCults = [...data.infecto.culturas];
+    const newCults = [...toArray(data.infecto.culturas)];
     newCults[index] = { ...newCults[index], [field]: value };
     updatePatientObj({ ...data, infecto: { ...data.infecto, culturas: newCults } });
   };
@@ -1853,12 +1892,13 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                 </div>
               </div>
 
-              <Accordion title="Antibióticos & Culturas" icon={Microscope} count={(data.infecto.atbs || []).length + (data.infecto.culturas || []).length} isOpen={expandedSections.infecto} onToggle={() => toggleSection('infecto')} colorClass="teal">
+              <FichaErrorBoundary>
+              <Accordion title="Antibióticos & Culturas" icon={Microscope} count={toArray(data.infecto.atbs).length + toArray(data.infecto.culturas).length} isOpen={expandedSections.infecto} onToggle={() => toggleSection('infecto')} colorClass="teal">
                 <div className="mb-4 border-b border-teal-100 pb-4">
                   <h5 className="text-[10px] font-bold text-teal-600 uppercase mb-3 flex items-center gap-1"><Activity size={12} aria-hidden="true" /> Antibioticoterapia Ativa</h5>
                   {(!data.infecto.atbs || data.infecto.atbs.length === 0) && <span className="text-xs text-slate-400 italic block mb-2">Nenhum ATB em uso.</span>}
 
-                  {(data.infecto.atbs || []).map((atb, idx) => (
+                  {toArray(data.infecto.atbs).map((atb, idx) => (
                     <div key={idx} className="bg-white p-3 rounded-xl border border-teal-100 relative shadow-sm mb-2">
                       <button
                         onClick={() => removeAtb(idx)}
@@ -1913,9 +1953,9 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
 
                 <div>
                   <h5 className="text-[10px] font-bold text-teal-600 uppercase mb-3 flex items-center gap-1"><TestTube size={12} aria-hidden="true" /> Monitorização de Culturas</h5>
-                  {(!data.infecto.culturas || data.infecto.culturas.length === 0) && <span className="text-xs text-slate-400 italic block mb-2">Nenhuma cultura registada.</span>}
+                  {toArray(data.infecto.culturas).length === 0 && <span className="text-xs text-slate-400 italic block mb-2">Nenhuma cultura registada.</span>}
 
-                  {(data.infecto.culturas || []).map((cult, idx) => (
+                  {toArray(data.infecto.culturas).map((cult, idx) => (
                     <div key={idx} className="bg-white p-3 rounded-xl border border-teal-100 relative shadow-sm mb-2">
                       <button
                         onClick={() => removeCultura(idx)}
@@ -1960,6 +2000,7 @@ function PatientCard({ data, updatePatientObj, onBack, onDelete, showAlert }) {
                   </button>
                 </div>
               </Accordion>
+              </FichaErrorBoundary>
 
               <NotasField sistemaNome="Infecciologia" notasValue={data.infecto.notas} showNotas={showNotas.infecto} onToggle={() => toggleNotas('infecto')} onUpdate={(val) => updateField('infecto.notas', val)} />
             </div>
