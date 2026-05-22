@@ -4,77 +4,110 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-**Comando UTI** is a Brazilian ICU (Intensive Care Unit) patient management web app. It allows medical staff to track and manage patient data across clinical systems (hemodynamics, respiratory, neurological, renal, infectious, etc.) and produce structured handoff/round summaries. The UI is in Portuguese.
+**Comando UTI / SASI** is a Brazilian ICU (Intensive Care Unit) patient management web app. It allows medical staff to track and manage patient data across clinical systems (hemodynamics, respiratory, neurological, renal, infectious, etc.) and produce structured handoff/round summaries. The UI is in Portuguese.
+
+Production URL: https://sasi-uti.netlify.app
+
+## Repository Layout
+
+The deployed app lives in a subdirectory whose name contains accented characters and spaces — quote it on every shell call:
+
+```
+OPERAÇÃO SASI — Sistema de Auditoria e Síntese Intensiva/
+└── sasi-frontend/          ← THE DEPLOYED APP (TypeScript + React + Supabase)
+    ├── src/
+    │   ├── App.tsx
+    │   ├── components/     ← Dashboard, FichaCompleta, LeitoCard, SmartPasteBox, …
+    │   ├── hooks/          ← useSupabasePatients, useClinicalAlerts, useTrendsData
+    │   └── lib/            ← supabaseClient, drugs, theme, toArray, exportPDF, exportText
+    └── supabase/
+        ├── functions/      ← Deno Edge Functions (ocr-ingest)
+        └── migrations/     ← schema deltas applied via Supabase SQL editor
+```
+
+Other top-level entries (`SASI_BACKUP/`, `.github/`, `.agents/`, `.claude/`, `.mcp.json`, `install.cmd`, `bradlc.vscode-tailwindcss-*.vsix`) are project metadata or historical backups — **not** part of the build.
+
+There is no second frontend at the repo root. A previous JS monolith (`src/App.jsx`) used to live there and was removed in commit `e844eaa` because it was unreachable from any deploy and caused fixes to land in the wrong codebase.
 
 ## Commands
 
-### Frontend (root directory)
+All build / dev commands run **inside the deployed-app subdirectory**:
+
 ```bash
-npm run dev        # Start Vite dev server
+cd "OPERAÇÃO SASI — Sistema de Auditoria e Síntese Intensiva/sasi-frontend"
+
+npm install        # Install deps
+npm run dev        # Vite dev server (http://localhost:5173)
 npm run build      # Production build to dist/
 npm run preview    # Preview production build
-npm run lint       # Run ESLint on src/
+npm run typecheck  # tsc -b --noEmit
 ```
 
-### Firebase Functions (run inside each subdirectory)
-```bash
-cd functions && npm run build       # Compile TypeScript
-cd functions && npm run lint        # Lint functions code
-cd functions && npm run serve       # Build + start emulator (functions only)
-cd genkitggoggins && npm run build  # Compile Genkit codebase
+## Deployment
+
+**Netlify** is configured at the repo root in `netlify.toml`:
+
+```toml
+[build]
+  base    = "OPERAÇÃO SASI — Sistema de Auditoria e Síntese Intensiva/sasi-frontend"
+  command = "npm run build"
+  publish = "dist"
 ```
 
-### Firebase Deployment
-```bash
-firebase deploy                     # Deploy everything
-firebase deploy --only hosting      # Deploy frontend only
-firebase deploy --only functions    # Deploy all function codebases
-firebase emulators:start            # Start all emulators (functions + dataconnect)
-```
+Pushing to `main` triggers a build of the subdirectory and publishes its `dist/` to `sasi-uti.netlify.app`. SPA fallback redirect `/* → /index.html` is set up.
 
-### Database
-The Supabase schema is at `supabase/migrations/01_initial_schema.sql`. Apply it via the Supabase dashboard SQL editor — there is no migration runner configured locally.
+Edge Functions (e.g. `ocr-ingest`) are deployed separately via the Supabase CLI / dashboard from `sasi-frontend/supabase/functions/`. Database schema changes (`sasi-frontend/supabase/migrations/`) are applied via the Supabase SQL Editor — there is no automated migration runner.
 
 ## Architecture
 
-### Frontend (`src/`)
-The entire frontend is a single large React component in `src/App.jsx`. All patient state, clinical dictionaries (DVA drugs, sedatives, neurological scales), and UI sections live in this one file. There is no routing — the app is one page with multi-patient management via a patient list sidebar.
+### Frontend (TypeScript)
 
-**State model**: Each patient is a flat JSON object with nested objects per clinical system (`neuro`, `resp`, `hemo`, `tgi`, `renal`, `hemato`, `infecto`), plus arrays for `dvas`, `sedativos`, `impressao` (diagnosis), `conduta` (plan), and `pendencias` (pending tasks).
+- `src/App.tsx` — Boots Supabase session (with a mock-session bypass for the auth-disabled phase), wraps the app in `ErrorBoundary` + `UIProvider` (theme) + `ToastProvider`, and renders `Dashboard`.
+- `src/components/Dashboard.tsx` — Top-level UTI view: split view, war room, table view, leito grid.
+- `src/components/FichaCompleta.tsx` — The patient ficha with all 7 clinical-system editors (neuro, resp, hemo, tgi, renal, hemato, infecto), plus DVAs/sedativos/escalas/atb/culturas accordions and free-text problemas/conduta/pendências. This is the largest single file and the most crash-sensitive surface; the "Antibióticos & Culturas" section is wrapped in a local `ErrorBoundary` to isolate failures from the rest of the ficha.
+- `src/components/SmartPasteBox.tsx` — Paste clinical text, calls the `ocr-ingest` Edge Function to OCR/extract structured data via AI, and the result lands in Supabase.
+- `src/hooks/useSupabasePatients.ts` — All CRUD + realtime subscriptions for `pacientes` and `evolucoes`. `getEvolucoes`/`getLastEvolucao` normalize the JSONB payload so array-shaped fields (`infecto.atbs`, `infecto.culturas`, `dvas`, `sedativos`, `impressao`, `conduta`) always reach React state as arrays — defense against malformed AI output stored in the DB.
 
-### Data Layer (`src/lib/`)
-- `supabase.js`: Supabase client, reads `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from `.env`
-- `supabaseAdapter.js`: **Critical bridge** — maps the flat React patient JSON to/from the normalized Supabase schema. Uses polling (10-second interval) rather than Supabase Realtime because data spans 4 tables simultaneously.
+### Data Layer (Supabase)
 
-### Supabase Schema (4 tables)
-| Table | Purpose |
-|---|---|
-| `patients` | Demographics, diagnosis, active problems, plan, pending issues |
-| `clinical_parameters` | Vital signs and shift data (inserted each save, not upserted) |
-| `prescriptions` | DVAs, sedatives, antibiotics (fully replaced on each save) |
-| `lab_results` | Blood work (inserted each save, not upserted) |
+Core tables (see `sasi-frontend/supabase/migrations/`):
+- `pacientes` — leito, demographic, dispositivos/isolation/severidade flags
+- `evolucoes` — per-shift JSONB snapshot of each clinical system + arrays for DVAs/sedativos/impressao/conduta
+- `eventos_clinicos` — timeseries (vital signs, lab values, SOFA scores); fed by the Edge Function
+- `pendencias` — checklist items linked to a paciente
 
-### Firebase Backend (multiple codebases)
-`firebase.json` defines 4 functions codebases deployed separately:
-- `functions/` (codebase `default`): Main Cloud Functions entry point (TypeScript); currently mostly empty scaffolding
-- `genkitggoggins/` (codebase `genkit`): Genkit AI flows
-- `base-de-dados-ggoggins/` (codebase `backendfirebase`): Database-related functions
-- `]ty/` (codebase `f`): Additional functions
-- `codebase/` (codebase `codebase`): Additional functions
+Views: `vw_dashboard_uti` materializes the dashboard summary.
 
-Firebase Hosting serves `dist/` with SPA rewrites. Firestore is in `southamerica-east1`.
+### Edge Function `ocr-ingest`
+
+Located at `sasi-frontend/supabase/functions/ocr-ingest/index.ts`. Receives raw clinical text from `SmartPasteBox`, calls an AI extractor (Claude or Gemini, depending on `payload.source.fonte`), and inserts the structured snapshot into `pacientes` / `evolucoes` / `eventos_clinicos`. It coerces `infecto.atbs`, `infecto.culturas`, `dvas`, `sedativos`, `impressao`, `conduta` to arrays before INSERT so that malformed AI output cannot poison the JSONB columns.
+
+## Defensive coding conventions
+
+`src/lib/toArray.ts` is the canonical guard for any value coming from Supabase JSONB, AI output, or other external source that should be an array. Always use:
+
+```ts
+import { toArray } from '../lib/toArray';
+toArray<MyType>(maybeArrayValue).map(...)
+```
+
+instead of TypeScript-only patterns like `((x as MyType[]) ?? []).map(...)` — the cast is compile-time only and lies at runtime if the value is a string or object (the exact bug that crashed the ficha when culturas came back as something other than an array).
 
 ## Environment Setup
 
-Create a `.env` file in the root with:
+Inside `sasi-frontend/`, create `.env` (or `.env.local`):
+
 ```
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
+`.env.example` in the same folder documents the full list of expected variables.
+
 ## UI Conventions
 
-- **Tailwind CSS v4** via `@tailwindcss/vite` plugin — no `tailwind.config.js` class scanning needed
-- Print support: use `no-print` class to hide elements, `print:` Tailwind variants for print styles
-- Dark mode: custom classes `dark-input` and `dark-textarea` are used (defined in `src/index.css`)
+- **Tailwind CSS v3** with content scanning configured in `sasi-frontend/tailwind.config.js`
+- Theme: `UIProvider` (`src/lib/theme.tsx`) provides 3 themes (dark / clinical / light) plus 3 view modes (split / war room / table)
+- Toasts: `useToasts` hook + `ToastProvider`
 - Icons: `lucide-react` throughout
+- Error UX: `ErrorBoundary` at the App root catches anything that escapes; in addition, the Antibióticos & Culturas section in `FichaCompleta.tsx` is wrapped in its own boundary so a crash there does not kill the rest of the ficha during a plantão
