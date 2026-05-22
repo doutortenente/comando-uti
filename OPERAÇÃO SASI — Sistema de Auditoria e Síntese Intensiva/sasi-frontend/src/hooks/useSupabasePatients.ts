@@ -6,6 +6,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, type Paciente, type Evolucao, type DashboardRow } from '../lib/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { toArray } from '../lib/toArray';
+
+// Garante que campos esperados como array em evolucao.infecto cheguem como array,
+// mesmo que o JSONB do Supabase tenha sido escrito com shape inesperado.
+function normalizeEvolucao(ev: Evolucao): Evolucao {
+  const rawInfecto = (ev.infecto ?? {}) as Record<string, unknown>;
+  return {
+    ...ev,
+    infecto: {
+      ...rawInfecto,
+      atbs: toArray(rawInfecto.atbs),
+      culturas: toArray(rawInfecto.culturas),
+    },
+    dvas: toArray(ev.dvas),
+    sedativos: toArray(ev.sedativos),
+    impressao: toArray(ev.impressao),
+    conduta: toArray(ev.conduta),
+  };
+}
 
 // ============================================================================
 // ESTADO LOCAL (espelho do que estava no Firebase)
@@ -211,7 +230,7 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
         .limit(limit);
 
       if (err) return [];
-      return data ?? [];
+      return (data ?? []).map(normalizeEvolucao);
     },
     []
   );
@@ -227,7 +246,7 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
         .single();
 
       if (err) return null;
-      return data;
+      return data ? normalizeEvolucao(data) : null;
     },
     []
   );
