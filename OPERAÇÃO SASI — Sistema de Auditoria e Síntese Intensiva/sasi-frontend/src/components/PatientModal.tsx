@@ -20,6 +20,7 @@ import {
   type Pendencia,
   type EventoClinico,
 } from '../lib/supabaseClient';
+import { normalizeEvolucao } from '../lib/normalizeEvolucao';
 import { sofaColorClass, SYSTEM_COLORS, CLINICAL_LABELS } from '../lib/drugs';
 import InfusionEditor, { type Infusion } from './InfusionEditor';
 import MiniChart from './MiniChart';
@@ -287,7 +288,7 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
         .limit(7),
     ]);
     setPaciente(pacRes.data ?? null);
-    setEvolucao(evolRes.data?.[0] ?? null);
+    setEvolucao(evolRes.data?.[0] ? normalizeEvolucao(evolRes.data[0]) : null);
     setPendencias(pendRes.data ?? []);
     setSofaHistory(sofaRes.data ?? []);
     setLoading(false);

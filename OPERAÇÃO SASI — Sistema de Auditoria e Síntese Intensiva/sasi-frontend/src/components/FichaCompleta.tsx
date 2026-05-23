@@ -165,10 +165,18 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
     }
 
     // 2) Evolução (cria se não existe)
+    // Defesa de borda: coage atbs/culturas/escalas a arrays antes do INSERT
+    // para não poluir o JSONB se algum draft estiver em shape inesperado.
+    const safeNeuro = { ...neuroDraft, escalas: toArray(neuroDraft.escalas) };
+    const safeInfecto = {
+      ...infectoDraft,
+      atbs: toArray(infectoDraft.atbs),
+      culturas: toArray(infectoDraft.culturas),
+    };
     const evolPatch = {
-      neuro: neuroDraft, resp: respDraft, hemo: hemoDraft, tgi: tgiDraft,
-      renal: renalDraft, hemato: hematoDraft, infecto: infectoDraft,
-      dvas: dvasDraft, sedativos: sedDraft,
+      neuro: safeNeuro, resp: respDraft, hemo: hemoDraft, tgi: tgiDraft,
+      renal: renalDraft, hemato: hematoDraft, infecto: safeInfecto,
+      dvas: toArray(dvasDraft), sedativos: toArray(sedDraft),
       impressao: impressaoDraft.filter(s => s.trim() !== ''),
       conduta: condutaDraft.filter(s => s.trim() !== ''),
     };
@@ -501,7 +509,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           <Accordion
             title="Escalas Clínicas"
             icon={Clipboard}
-            count={(neuroDraft.escalas as Escala[] | undefined)?.length ?? 0}
+            count={toArray<Escala>(neuroDraft.escalas).length}
             isOpen={openSec.escalas}
             onToggle={() => toggle('escalas')}
             color="purple"

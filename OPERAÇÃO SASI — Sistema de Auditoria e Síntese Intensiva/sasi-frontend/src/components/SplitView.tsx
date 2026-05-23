@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { DashboardRow } from '../lib/supabaseClient';
 import { supabase, type Evolucao, type Pendencia } from '../lib/supabaseClient';
+import { normalizeEvolucao } from '../lib/normalizeEvolucao';
 import { sofaColorClass, SYSTEM_COLORS, CLINICAL_LABELS, checkVitalAlert } from '../lib/drugs';
 import LeitoCard from './LeitoCard';
 import { EmptyState } from './Skeletons';
@@ -90,7 +91,7 @@ export default function SplitView({ patients, onOpenFull }: Props) {
         .order('prioridade', { ascending: true })
         .limit(5),
     ]);
-    setEvolucao(evolRes.data?.[0] ?? null);
+    setEvolucao(evolRes.data?.[0] ? normalizeEvolucao(evolRes.data[0]) : null);
     setPendencias(pendRes.data ?? []);
     setLoadingPreview(false);
   }, []);
