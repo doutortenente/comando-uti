@@ -15,9 +15,11 @@ import {
   DVA_DICT, SEDACAO_DICT, calculateDose, ESCALAS_NEURO,
   isHigh, isLow, formatDiureseEfetiva,
 } from '../lib/drugs';
+import { toArray } from '../lib/toArray';
 import InlineInput from './clinical/InlineInput';
 import NotasField from './clinical/NotasField';
 import Accordion from './clinical/Accordion';
+import ErrorBoundary from './ErrorBoundary';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface Infusao {
@@ -106,11 +108,16 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
     setTgiDraft({ ...(evolucao.tgi ?? {}) });
     setRenalDraft({ ...(evolucao.renal ?? {}) });
     setHematoDraft({ ...(evolucao.hemato ?? {}) });
-    setInfectoDraft({ ...(evolucao.infecto ?? {}) });
-    setDvasDraft((evolucao.dvas ?? []) as Infusao[]);
-    setSedDraft((evolucao.sedativos ?? []) as Infusao[]);
-    const imp = (evolucao.impressao ?? []) as string[];
-    const cond = (evolucao.conduta ?? []) as string[];
+    const rawInfecto = (evolucao.infecto ?? {}) as Record<string, unknown>;
+    setInfectoDraft({
+      ...rawInfecto,
+      atbs: toArray<AtbItem>(rawInfecto.atbs),
+      culturas: toArray<CulturaItem>(rawInfecto.culturas),
+    });
+    setDvasDraft(toArray<Infusao>(evolucao.dvas));
+    setSedDraft(toArray<Infusao>(evolucao.sedativos));
+    const imp = toArray<string>(evolucao.impressao);
+    const cond = toArray<string>(evolucao.conduta);
     setImpressaoDraft([...imp, ...Array(Math.max(0, 4 - imp.length)).fill('')].slice(0, 4));
     setCondutaDraft([...cond, ...Array(Math.max(0, 4 - cond.length)).fill('')].slice(0, 4));
   }, [evolucao]);
@@ -158,10 +165,18 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
     }
 
     // 2) Evolução (cria se não existe)
+    // Defesa de borda: coage atbs/culturas/escalas a arrays antes do INSERT
+    // para não poluir o JSONB se algum draft estiver em shape inesperado.
+    const safeNeuro = { ...neuroDraft, escalas: toArray(neuroDraft.escalas) };
+    const safeInfecto = {
+      ...infectoDraft,
+      atbs: toArray(infectoDraft.atbs),
+      culturas: toArray(infectoDraft.culturas),
+    };
     const evolPatch = {
-      neuro: neuroDraft, resp: respDraft, hemo: hemoDraft, tgi: tgiDraft,
-      renal: renalDraft, hemato: hematoDraft, infecto: infectoDraft,
-      dvas: dvasDraft, sedativos: sedDraft,
+      neuro: safeNeuro, resp: respDraft, hemo: hemoDraft, tgi: tgiDraft,
+      renal: renalDraft, hemato: hematoDraft, infecto: safeInfecto,
+      dvas: toArray(dvasDraft), sedativos: toArray(sedDraft),
       impressao: impressaoDraft.filter(s => s.trim() !== ''),
       conduta: condutaDraft.filter(s => s.trim() !== ''),
     };
@@ -276,7 +291,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           </div>
           {evolucao?.sofa_snapshot?.detail && (
             <div className="flex flex-wrap gap-1">
-              {(evolucao.sofa_snapshot.detail as string[]).map((d, i) => (
+              {toArray<string>(evolucao.sofa_snapshot.detail).map((d, i) => (
                 <span key={i} className="text-[9px] font-bold bg-app-card border border-app-border text-app-text-2 px-1.5 py-0.5 rounded">
                   {d}
                 </span>
@@ -494,16 +509,16 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           <Accordion
             title="Escalas Clínicas"
             icon={Clipboard}
-            count={(neuroDraft.escalas as Escala[] | undefined)?.length ?? 0}
+            count={toArray<Escala>(neuroDraft.escalas).length}
             isOpen={openSec.escalas}
             onToggle={() => toggle('escalas')}
             color="purple"
           >
-            {((neuroDraft.escalas as Escala[]) ?? []).map((esc, idx) => (
+            {toArray<Escala>(neuroDraft.escalas).map((esc, idx) => (
               <div key={idx} className="bg-app-card p-3 rounded-xl border border-purple-500/20 relative shadow-sm">
                 <button
                   onClick={() => {
-                    const arr = ((neuroDraft.escalas as Escala[]) ?? []).filter((_, i) => i !== idx);
+                    const arr = toArray<Escala>(neuroDraft.escalas).filter((_, i) => i !== idx);
                     setDraft('neuro', { escalas: arr });
                   }}
                   className="absolute top-3 right-3 text-red-400/60 hover:text-red-500 transition"
@@ -516,7 +531,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                       className="bg-app-tertiary border border-purple-500/30 p-1.5 rounded text-xs font-bold text-app-text-2"
                       value={esc.nome ?? ''}
                       onChange={e => {
-                        const arr = [...((neuroDraft.escalas as Escala[]) ?? [])];
+                        const arr = [...toArray<Escala>(neuroDraft.escalas)];
                         arr[idx] = { ...arr[idx], nome: e.target.value };
                         setDraft('neuro', { escalas: arr });
                       }}
@@ -532,7 +547,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                           className="w-16 border-b-2 border-purple-500/40 focus:border-purple-500 focus:outline-none rounded text-center bg-transparent font-bold text-sm text-app-text"
                           value={esc.valor ?? ''}
                           onChange={e => {
-                            const arr = [...((neuroDraft.escalas as Escala[]) ?? [])];
+                            const arr = [...toArray<Escala>(neuroDraft.escalas)];
                             arr[idx] = { ...arr[idx], valor: e.target.value };
                             setDraft('neuro', { escalas: arr });
                           }}
@@ -550,7 +565,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
             ))}
             <button
               onClick={() => {
-                const arr = [...((neuroDraft.escalas as Escala[]) ?? []), { nome: '', valor: '' }];
+                const arr = [...toArray<Escala>(neuroDraft.escalas), { nome: '', valor: '' }];
                 setDraft('neuro', { escalas: arr });
               }}
               className="w-full py-2 flex items-center justify-center gap-2 text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 border-2 border-purple-500/30 border-dashed rounded-xl text-xs font-bold transition"
@@ -1200,10 +1215,11 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
             </div>
 
             {/* ATB + Culturas accordion */}
+            <ErrorBoundary>
             <Accordion
               title="Antibióticos & Culturas"
               icon={Microscope}
-              count={((infectoDraft.atbs as AtbItem[] | undefined)?.length ?? 0) + ((infectoDraft.culturas as CulturaItem[] | undefined)?.length ?? 0)}
+              count={toArray<AtbItem>(infectoDraft.atbs).length + toArray<CulturaItem>(infectoDraft.culturas).length}
               isOpen={openSec.infecto}
               onToggle={() => toggle('infecto')}
               color="teal"
@@ -1213,11 +1229,11 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                 <h5 className="text-[10px] font-bold text-teal-400 uppercase mb-3 flex items-center gap-1">
                   <Activity className="w-3 h-3" /> Antibioticoterapia Ativa
                 </h5>
-                {((infectoDraft.atbs as AtbItem[]) ?? []).map((atb, idx) => (
+                {toArray<AtbItem>(infectoDraft.atbs).map((atb, idx) => (
                   <div key={idx} className="bg-app-card p-3 rounded-xl border border-teal-500/20 relative shadow-sm mb-2">
                     <button
                       onClick={() => {
-                        const arr = ((infectoDraft.atbs as AtbItem[]) ?? []).filter((_, i) => i !== idx);
+                        const arr = toArray<AtbItem>(infectoDraft.atbs).filter((_, i) => i !== idx);
                         setDraft('infecto', { atbs: arr });
                       }}
                       className="absolute top-3 right-3 text-red-400/60 hover:text-red-500 transition"
@@ -1231,7 +1247,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                           className="bg-app-tertiary border border-teal-500/30 p-1.5 rounded-md text-xs font-bold text-app-text-2"
                           value={atb.nome ?? ''}
                           onChange={e => {
-                            const arr = [...((infectoDraft.atbs as AtbItem[]) ?? [])];
+                            const arr = [...toArray<AtbItem>(infectoDraft.atbs)];
                             arr[idx] = { ...arr[idx], nome: e.target.value };
                             setDraft('infecto', { atbs: arr });
                           }}
@@ -1252,7 +1268,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                             className="border-b border-teal-500/40 focus:border-teal-500 focus:outline-none rounded px-1 bg-transparent text-xs font-bold mt-1 text-app-text-2"
                             value={atb.nomePersonalizado ?? ''}
                             onChange={e => {
-                              const arr = [...((infectoDraft.atbs as AtbItem[]) ?? [])];
+                              const arr = [...toArray<AtbItem>(infectoDraft.atbs)];
                               arr[idx] = { ...arr[idx], nomePersonalizado: e.target.value };
                               setDraft('infecto', { atbs: arr });
                             }}
@@ -1266,7 +1282,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                           className="w-full bg-teal-500/5 border border-teal-500/20 px-2 py-1.5 rounded-md text-xs font-medium text-app-text-2"
                           value={atb.dose ?? ''}
                           onChange={e => {
-                            const arr = [...((infectoDraft.atbs as AtbItem[]) ?? [])];
+                            const arr = [...toArray<AtbItem>(infectoDraft.atbs)];
                             arr[idx] = { ...arr[idx], dose: e.target.value };
                             setDraft('infecto', { atbs: arr });
                           }}
@@ -1281,7 +1297,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                             className="w-6 border-b-2 border-teal-500/40 focus:border-teal-500 focus:outline-none rounded px-1 text-center bg-transparent font-bold text-sm text-app-text"
                             value={atb.dias ?? ''}
                             onChange={e => {
-                              const arr = [...((infectoDraft.atbs as AtbItem[]) ?? [])];
+                              const arr = [...toArray<AtbItem>(infectoDraft.atbs)];
                               arr[idx] = { ...arr[idx], dias: e.target.value };
                               setDraft('infecto', { atbs: arr });
                             }}
@@ -1293,7 +1309,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                 ))}
                 <button
                   onClick={() => {
-                    const arr = [...((infectoDraft.atbs as AtbItem[]) ?? []), { nome: '', dose: '', dias: '' }];
+                    const arr = [...toArray<AtbItem>(infectoDraft.atbs), { nome: '', dose: '', dias: '' }];
                     setDraft('infecto', { atbs: arr });
                   }}
                   className="w-full py-2 mt-2 flex items-center justify-center gap-2 text-teal-400 bg-teal-500/10 hover:bg-teal-500/20 border-2 border-teal-500/30 border-dashed rounded-xl text-xs font-bold transition"
@@ -1307,11 +1323,11 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                 <h5 className="text-[10px] font-bold text-teal-400 uppercase mb-3 flex items-center gap-1">
                   <TestTube className="w-3 h-3" /> Monitorização de Culturas
                 </h5>
-                {((infectoDraft.culturas as CulturaItem[]) ?? []).map((cult, idx) => (
+                {toArray<CulturaItem>(infectoDraft.culturas).map((cult, idx) => (
                   <div key={idx} className="bg-app-card p-3 rounded-xl border border-teal-500/20 relative shadow-sm mb-2">
                     <button
                       onClick={() => {
-                        const arr = ((infectoDraft.culturas as CulturaItem[]) ?? []).filter((_, i) => i !== idx);
+                        const arr = toArray<CulturaItem>(infectoDraft.culturas).filter((_, i) => i !== idx);
                         setDraft('infecto', { culturas: arr });
                       }}
                       className="absolute top-3 right-3 text-red-400/60 hover:text-red-500 transition"
@@ -1324,7 +1340,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                         className="w-20 border-b-2 border-teal-500/40 focus:border-teal-500 focus:outline-none rounded px-1 bg-transparent text-sm font-bold uppercase text-app-text-2"
                         value={cult.tipo ?? ''}
                         onChange={e => {
-                          const arr = [...((infectoDraft.culturas as CulturaItem[]) ?? [])];
+                          const arr = [...toArray<CulturaItem>(infectoDraft.culturas)];
                           arr[idx] = { ...arr[idx], tipo: e.target.value };
                           setDraft('infecto', { culturas: arr });
                         }}
@@ -1336,7 +1352,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                           className="w-14 border-b border-teal-500/40 focus:border-teal-500 focus:outline-none rounded px-1 bg-transparent text-xs text-center text-app-text-2"
                           value={cult.data ?? ''}
                           onChange={e => {
-                            const arr = [...((infectoDraft.culturas as CulturaItem[]) ?? [])];
+                            const arr = [...toArray<CulturaItem>(infectoDraft.culturas)];
                             arr[idx] = { ...arr[idx], data: e.target.value };
                             setDraft('infecto', { culturas: arr });
                           }}
@@ -1346,7 +1362,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                         className="flex-1 min-w-[130px] bg-teal-500/10 border border-teal-500/30 p-1.5 rounded-md text-xs font-bold text-app-text-2"
                         value={cult.status ?? ''}
                         onChange={e => {
-                          const arr = [...((infectoDraft.culturas as CulturaItem[]) ?? [])];
+                          const arr = [...toArray<CulturaItem>(infectoDraft.culturas)];
                           arr[idx] = { ...arr[idx], status: e.target.value };
                           setDraft('infecto', { culturas: arr });
                         }}
@@ -1369,7 +1385,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                           className="flex-1 bg-transparent border-b border-yellow-500/40 focus:border-yellow-500 focus:outline-none rounded px-1 text-xs text-yellow-300 font-medium w-full"
                           value={cult.detalhe ?? ''}
                           onChange={e => {
-                            const arr = [...((infectoDraft.culturas as CulturaItem[]) ?? [])];
+                            const arr = [...toArray<CulturaItem>(infectoDraft.culturas)];
                             arr[idx] = { ...arr[idx], detalhe: e.target.value };
                             setDraft('infecto', { culturas: arr });
                           }}
@@ -1380,7 +1396,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                 ))}
                 <button
                   onClick={() => {
-                    const arr = [...((infectoDraft.culturas as CulturaItem[]) ?? []), { tipo: '', data: '', status: '' }];
+                    const arr = [...toArray<CulturaItem>(infectoDraft.culturas), { tipo: '', data: '', status: '' }];
                     setDraft('infecto', { culturas: arr });
                   }}
                   className="w-full py-2 mt-2 flex items-center justify-center gap-2 text-teal-400 bg-teal-500/10 hover:bg-teal-500/20 border-2 border-teal-500/30 border-dashed rounded-xl text-xs font-bold transition"
@@ -1389,6 +1405,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
                 </button>
               </div>
             </Accordion>
+            </ErrorBoundary>
             <NotasField sistemaNome="Infectologia" value={String(infectoDraft.notas ?? '')} onChange={v => setDraft('infecto', { notas: v })} />
           </div>
         </div>

@@ -129,15 +129,22 @@ Deno.serve(async (req: Request) => {
   let evolucao_id: string | null = null;
   if (payload.evolucao_snapshot && typeof payload.evolucao_snapshot === "object") {
     const snap = payload.evolucao_snapshot as Record<string, unknown>;
+    const asArr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
+    const rawInfecto = (snap.infecto ?? {}) as Record<string, unknown>;
+    const safeInfecto = {
+      ...rawInfecto,
+      atbs: asArr(rawInfecto.atbs),
+      culturas: asArr(rawInfecto.culturas),
+    };
     const evolucaoBody: Record<string, unknown> = {
       paciente_id, user_id,
       data_evolucao: snap.data_evolucao ?? payload.extracted_at,
       plantao: snap.plantao ?? "manha",
       neuro: snap.neuro ?? {}, resp: snap.resp ?? {}, hemo: snap.hemo ?? {},
       tgi: snap.tgi ?? {}, renal: snap.renal ?? {}, hemato: snap.hemato ?? {},
-      infecto: snap.infecto ?? {},
-      dvas: snap.dvas ?? [], sedativos: snap.sedativos ?? [],
-      impressao: snap.impressao ?? [], conduta: snap.conduta ?? [],
+      infecto: safeInfecto,
+      dvas: asArr(snap.dvas), sedativos: asArr(snap.sedativos),
+      impressao: asArr(snap.impressao), conduta: asArr(snap.conduta),
     };
     const { data: evol, error: evolErr } = await admin
       .from("evolucoes").insert(evolucaoBody).select("id").single();

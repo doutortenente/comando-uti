@@ -2,6 +2,10 @@
   base    = "OPERAÇÃO SASI — Sistema de Auditoria e Síntese Intensiva/sasi-frontend"
   command = "npm run build"
   publish = "dist"
+  # Sempre rebuildar: o auto-skip "no content change" do Netlify dá falso
+  # negativo neste repo (provável bug com Unicode no nome do base dir).
+  # exit 1 = não-ignore = força build em todo push.
+  ignore  = "exit 1"
 
 [build.environment]
   NODE_VERSION = "20"

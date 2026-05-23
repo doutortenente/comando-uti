@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, type Paciente, type Evolucao, type DashboardRow } from '../lib/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { normalizeEvolucao } from '../lib/normalizeEvolucao';
 
 // ============================================================================
 // ESTADO LOCAL (espelho do que estava no Firebase)
@@ -211,7 +212,7 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
         .limit(limit);
 
       if (err) return [];
-      return data ?? [];
+      return (data ?? []).map(normalizeEvolucao);
     },
     []
   );
@@ -227,7 +228,7 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
         .single();
 
       if (err) return null;
-      return data;
+      return data ? normalizeEvolucao(data) : null;
     },
     []
   );

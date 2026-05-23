@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { DashboardRow, Evolucao } from '../lib/supabaseClient';
 import { supabase } from '../lib/supabaseClient';
+import { normalizeEvolucao } from '../lib/normalizeEvolucao';
 import { sofaColorClass, checkVitalAlert } from '../lib/drugs';
 
 interface Props {
@@ -91,7 +92,7 @@ export default function TableView({ patients, onSelect }: Props) {
     if (data) {
       const map: Record<string, Evolucao> = {};
       for (const e of data as Evolucao[]) {
-        if (!map[e.paciente_id]) map[e.paciente_id] = e;
+        if (!map[e.paciente_id]) map[e.paciente_id] = normalizeEvolucao(e);
       }
       setEvolMap(map);
     }
