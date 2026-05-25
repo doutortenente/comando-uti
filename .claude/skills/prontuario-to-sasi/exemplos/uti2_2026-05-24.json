@@ -1,0 +1,196 @@
+[
+  {
+    "leito": "02",
+    "uti": "UTI2",
+    "nome": "VANESSA FERREIRA SANTOS",
+    "idade": 41,
+    "gravidade": "critico",
+    "status_leito": "ativo",
+    "data_adm": "2026-05-22",
+    "alergias": "Digesan",
+    "isolation": "none",
+    "dispositivos": {"mv": false, "dva": true, "sed": false, "atb": true, "cvc": true, "trr": false},
+    "out_of_range_count": 9,
+    "evolucao": {
+      "plantao": "manha",
+      "neuro": {"sedacao_analgesia": "Tramal SOS (sem sedacao continua)", "escalas": ["GCS 15, orientada, CAM-ICU negativo"]},
+      "resp": {"fr": {"max": 32, "min": 31, "n_maior_25": 12}, "spo2": {"max": 97, "min": 93, "suporte": "Cateter O2 2L/min", "n_menor_88": 0}, "ausculta": "MV + bilateral com crepitacoes bibasais; refere dor pleuritica retroesternal"},
+      "hemo": {"pas": {"max": 137, "min": 89}, "pad": {"max": 94, "min": 46}, "pam": {"max": 89, "min": 63, "n_menor_65": 1}, "fc": {"max": 129, "min": 92, "n_maior_100": 1}, "ausculta": "BRNF 2T com desdobramento em M2", "perfusao": "Perfusao periferica lentificada, TEC < 4,5s, extremidades quentes, pulsos filiformes"},
+      "tgi": {"dx": {"valores": "193 / 149 / 126", "n_maior_180": 1}, "dieta": {"tipo": "Jejum (nauseas/vomitos)", "ingesta_hidrica_ml": 1000}, "evacuacoes": "Sem evacuacao no periodo"},
+      "renal": {"ur_tendencia": "33 > 67", "cr_tendencia": "0,9 > 2,1", "eletrolitos": {"mg": 1.9, "na": 140, "cai": 1.2, "k": 4.3}, "diurese_total_ml": 1100, "bh_ml": 164},
+      "hemato": {"hb": "14 > 12", "ht": "43 > 34", "plaquetas": "198000 > 202000", "profilaxias": "Clexane 40mg SC + Pantozol 40mg EV + Hemofol 5000 ui SC + Cabeceira 30-45"},
+      "infecto": {"tmax": {"valor": 36.6, "n_maior_38": 0}, "atbs": [{"droga": "Cefuroxima (Zinacef) 750mg EV 8/8h", "dia_tratamento": "D3 - profilatico, suspender amanha"}], "culturas": ["Sugerido coletar 2 pares HMC + URC + ponta de cateter"], "leucocitos": "15800 > 20900"},
+      "dvas": [{"droga": "Noradrenalina (Hyponor)", "dose": "0,12-0,16 mcg/kg/min"}, {"droga": "Dobutamina (Dobutrex)", "dose": "5 mcg/kg/min"}],
+      "sedativos": [],
+      "prescricao": {
+        "cardiovascular": ["Clexane 40mg SC 1x/dia", "Coreg 6,25mg 2cp VO 12/12h", "Renitec 10mg 1cp VO 12/12h", "Dobutrex 250mg EV ACM", "Hyponor 8mg EV ACM"],
+        "snc": ["Tramal 100mg EV SN"],
+        "gastro_endocrino": ["Pantozol 40mg EV 12/12h", "Forxiga 10mg 1cp VO 1x/dia"],
+        "infeccioso_resp": ["Mucosolvan Xpe 10ml VO 6/6h", "Zinacef 750mg EV 8/8h"],
+        "sintomaticos_sn": ["Buscopan Simples 20mg EV 8/8h", "Zofran 8mg EV SN", "Novalgina 1g EV SN", "Mylanta Plus 5ml VO 4/4h", "Buscopan Composto 25gts VO 3x/dia", "Luftal 40gts VO 8/8h"],
+        "solucoes_diureticos": ["Lasix 20mg EV Cedo", "Soro Glicosado 5% EV ACM"],
+        "nutricao": []
+      },
+      "impressao": [
+        "Choque Cardiogenico SCAI C - em uso de Noradrenalina + Dobutamina",
+        "IC Aguda perfil C / ICFEr critica (FE ~11->16%) - reserva hemodinamica minima",
+        "IRA aguda KDIGO 2/3 (Cr 0,9->2,1) - sindrome cardiorrenal tipo 1 por baixo debito",
+        "Leucocitose ascendente 15,8->20,9 - investigar foco infeccioso (componente misto?)",
+        "POi CDI-RV (22/05) - pendente checagem de funcao do dispositivo"
+      ],
+      "conduta": [
+        "Reavaliacao Cardio: concentrar solucoes, jejum, otimizar diureticos, prioridade BH negativo",
+        "Manter Noradrenalina + Dobutamina, titular. Meta PAM >= 65, SvO2 >= 65%, Lac em queda",
+        "Mantidos suspensos: Carvedilol, Enalapril, Forxiga (ate estabilizacao)",
+        "Aguarda EcoTT de controle URGENTE - debito atual e descartar complicacao mecanica",
+        "Monitorizacao de DC continuo (VIGILEO/PiCCO); mantida PAI/POWERPICC/SVD",
+        "Furosemida EV para congestao apos PAM > 70 estavel; meta diurese >= 0,5 mL/kg/h",
+        "Suspender ATB profilatico (Cefuroxima) amanha; coletar culturas se piora",
+        "Cuidados PO de CDI-RV; aguarda checagem pela Eletrofisiologia"
+      ]
+    }
+  },
+  {
+    "leito": "09",
+    "uti": "UTI2",
+    "nome": "OLGA CORTEZ CACCELLI",
+    "idade": 95,
+    "gravidade": "grave",
+    "status_leito": "ativo",
+    "data_adm": "2026-05-19",
+    "alergias": "Nega",
+    "isolation": "none",
+    "dispositivos": {"mv": false, "dva": false, "sed": false, "atb": false, "cvc": false, "trr": false},
+    "out_of_range_count": 6,
+    "evolucao": {
+      "plantao": "manha",
+      "neuro": {"sedacao_analgesia": "Ajuste de psicotropicos (Quetiapina/Trazodona)", "escalas": ["GCS 14 (confusa, lentificada, PIFR, demencia de base)"]},
+      "resp": {"fr": {"max": 20, "min": 15, "n_maior_25": 0}, "spo2": {"max": 98, "min": 93, "suporte": "Ar ambiente", "n_menor_88": 0}, "ausculta": "MV + bilateral globalmente diminuido, estertores em bases bilaterais"},
+      "hemo": {"pas": {"max": 121, "min": 84}, "pad": {"max": 65, "min": 44}, "pam": {"max": 78, "min": 64, "n_menor_65": 1}, "fc": {"max": 113, "min": 89, "n_maior_100": 5}, "ausculta": "Bulhas arritmicas, hipofoneticas, sopro aortico", "perfusao": "Boa perfusao, sem edemas"},
+      "tgi": {"dx": {"valores": "122 / 107 / 106", "n_maior_180": 0}, "dieta": {"tipo": "Cremosa VO (Fresubin), espessante SN", "ingesta_hidrica_ml": 1100}, "evacuacoes": "Evacuacao presente"},
+      "renal": {"ur_tendencia": "57,5 > 46 > 53", "cr_tendencia": "1,2 > 1,1 > 1,3", "eletrolitos": {"mg": 2.2, "na": 136, "cai": 1.15, "k": 4.2}, "diurese_total_ml": 1300, "bh_ml": 60},
+      "hemato": {"hb": "11,3", "ht": "34", "plaquetas": "186000", "profilaxias": "Clexane 40mg SC + Pantozol 40mg EV + Cabeceira elevada"},
+      "infecto": {"tmax": {"valor": 36.5, "n_maior_38": 0}, "atbs": [], "culturas": [], "leucocitos": "8200"},
+      "dvas": [],
+      "sedativos": [],
+      "prescricao": {
+        "cardiovascular": ["Daflon 500mg VO 1x/dia", "Crestor 10mg VO Noite", "Aldactone 25mg VO Tarde", "Clexane 40mg SC 1x/dia"],
+        "snc": ["Eranz 10mg VO 8/8h", "Seroquel 25mg VO 8/8h", "Donaren 50mg VO Noite"],
+        "gastro_endocrino": ["Pantozol 40mg EV 1x/dia", "Synthroid 75mcg VO Jejum", "Digesan 10mg VO 3x/dia"],
+        "infeccioso_resp": ["Lacrima Plus Colirio topico 6/6h"],
+        "sintomaticos_sn": ["Novalgina 1g EV SN"],
+        "solucoes_diureticos": ["Lasix 40mg VO Manha"],
+        "nutricao": []
+      },
+      "impressao": [
+        "IC perfil B + Estenose Aortica grave - sem congestao aguda",
+        "Taquicardia sustentada (5x FC > 100, pico 119) - revisar etiologia (FA com RVA? hipovolemia? anemia?)",
+        "Nonagenaria fragil, demencia senil de base; discreta deterioracao renal (Cr 1,1->1,3)",
+        "Diagnosticos: IRpA, IC Aguda perfil B->L?, Estenose aortica grave, Delirium misto sobreposto a sd demencial"
+      ],
+      "conduta": [
+        "Monitorizacao continua; anti-hipertensivos e betabloqueador mantidos SUSPENSOS",
+        "FA cronica - controle de FC, tolerar ate 110 bpm se estavel",
+        "Meta PAM >= 65; se PAM < 60 ou taquicardia persistente, expansao cautelosa SF 250 mL",
+        "Suporte O2 se SpO2 < 92%",
+        "Risco de broncoaspiracao - dieta espessada, cabeceira elevada",
+        "Prevencao delirium/queda; ajuste de psicotropicos (Quetiapina/Trazodona)",
+        "Vigilancia hemodinamica - risco de necessidade de vasopressor"
+      ]
+    }
+  },
+  {
+    "leito": "12",
+    "uti": "UTI2",
+    "nome": "DIOGO DE MELO FERNANDES",
+    "idade": 61,
+    "gravidade": "moderado",
+    "status_leito": "ativo",
+    "data_adm": "2026-05-24",
+    "isolation": "none",
+    "dispositivos": {"mv": false, "dva": false, "sed": false, "atb": false, "cvc": false, "trr": false},
+    "out_of_range_count": 4,
+    "evolucao": {
+      "plantao": "manha",
+      "neuro": {"sedacao_analgesia": "Dimorf (morfina) EV SN; psicotropicos domiciliares", "escalas": ["GCS 15"]},
+      "resp": {"fr": {"max": 21, "min": 16, "n_maior_25": 0}, "spo2": {"max": 96, "min": 94, "suporte": "Ar ambiente", "n_menor_88": 0}, "ausculta": "MV + bilateral, SRA"},
+      "hemo": {"pas": {"max": 145, "min": 89, "n_menor_100": 1}, "pad": {"max": 91, "min": 54}, "pam": {"max": 99, "min": 63, "n_menor_65": 1}, "fc": {"max": 87, "min": 73}, "ausculta": "RCR 2T, BCNF sem sopros", "perfusao": "Extremidades quentes, bem perfundidas, sem edemas"},
+      "tgi": {"dx": {"valores": "196 / 192 / 163 / 146", "n_maior_180": 2}, "dieta": {"tipo": "VO", "ingesta_hidrica_ml": null}, "evacuacoes": "Sem evacuacao no periodo"},
+      "renal": {"ur_tendencia": "54 > 44,6", "cr_tendencia": "1,4 > 1,4", "eletrolitos": {"mg": 1.5, "na": 138, "cai": 1.21, "k": 4.2, "p": 5.4}, "diurese_total_ml": 1500, "bh_ml": 880},
+      "hemato": {"hb": "12", "ht": "37", "plaquetas": "161000", "profilaxias": "Clexane 40mg SC + Losec/Pantoprazol + Cabeceira elevada"},
+      "infecto": {"tmax": {"valor": 36.3, "n_maior_38": 0}, "atbs": [], "culturas": [], "leucocitos": "11300"},
+      "dvas": [],
+      "sedativos": [],
+      "prescricao": {
+        "cardiovascular": ["Clexane 40mg SC 1x/dia", "Apresolina 25mg VO 8/8h", "Monocordil 20mg VO 12/12h", "Selozok 50mg VO 12/12h", "Clorana 25mg VO Manha", "Benicar 20mg VO Manha", "AAS 100mg VO Almoco", "Plavix 75mg VO Almoco", "Crestor 10mg VO Noite", "Zetia 10mg VO Noite"],
+        "snc": ["Dimorf 2mg EV SN", "Seroquel 25mg VO Noite", "Amplictil 4% 5gts VO Noite", "Valium 5mg VO Noite"],
+        "gastro_endocrino": ["Losec 20mg VO Cedo", "Glifage 500mg VO Almoco"],
+        "infeccioso_resp": [],
+        "sintomaticos_sn": ["Novalgina 1g EV 6/6h"],
+        "solucoes_diureticos": [],
+        "nutricao": []
+      },
+      "impressao": [
+        "2 dia de internacao - sem injuria miocardica nova",
+        "Disglicemias refratarias a correcao com insulina regular",
+        "DAC grave multi-stent; angina instavel / dor precordial refrataria",
+        "Cateterismo cardiaco programado para amanha 08:30h"
+      ],
+      "conduta": [
+        "Acompanhamento da Cardiologia (Troponina seriada, ECO TT)",
+        "Otimizacao de analgesia com Morfina SOS / Titulacao de Tridil se novos episodios isquemicos",
+        "Vigilancia intensiva; mantidos psicotropicos domiciliares (Aguardando Psiq/Psico)",
+        "Monitorizacao renal e hidratacao (pre-coronariografia)",
+        "Protocolo CAD/EHH se necessario, correcao de K, DX 1/1h",
+        "ATENCAO: Testemunha de Jeova - recusa de hemoderivados a confirmar/documentar"
+      ]
+    }
+  },
+  {
+    "leito": "13",
+    "uti": "UTI2",
+    "nome": "FERNANDA BERTASSO FIGARO",
+    "idade": 44,
+    "gravidade": "grave",
+    "status_leito": "ativo",
+    "data_adm": "2026-05-24",
+    "isolation": "none",
+    "dispositivos": {"mv": false, "dva": false, "sed": false, "atb": false, "cvc": false, "trr": false},
+    "out_of_range_count": 2,
+    "evolucao": {
+      "plantao": "manha",
+      "neuro": {"sedacao_analgesia": "Nao", "escalas": ["GCS 13", "NIHSS admissao 19 -> serial pos-trombolise 17 -> 13"]},
+      "resp": {"fr": {"max": 19, "min": 17, "n_maior_25": 0}, "spo2": {"max": 96, "min": 93, "suporte": "CNL O2 2L/min", "n_menor_88": 0}, "ausculta": "MV + bilateral, SRA; gaso A: PaO2 58 / PCO2 42 / HCO3 27 / Lac 1 / SatO2 90%"},
+      "hemo": {"pas": {"max": 140, "min": 123}, "pad": {"max": 85, "min": 71}, "pam": {"max": 98, "min": 80, "n_menor_65": 0}, "fc": {"max": 96, "min": 87}, "ausculta": "Estavel sem DVA"},
+      "tgi": {"dx": {"valores": "159 / 131 / 125 / 124 / 108 / 107", "n_maior_180": 0}, "dieta": {"tipo": "Jejum", "aceitacao": "Aporte calorico em programacao"}, "evacuacoes": "Sem evacuacao no periodo"},
+      "renal": {"ur_tendencia": "25 > 17", "cr_tendencia": "0,6 > 0,7", "eletrolitos": {"mg": 1.91, "na": "141 > 139", "cai": 1.22, "k": "4,4 > 5,0"}, "diurese_total_ml": 1000, "efetiva_ml_kg_hr": 1.4, "bh_ml": 1009},
+      "hemato": {"hb": "12,4", "ht": "39", "plaquetas": "241000", "profilaxias": "HNF profilatica APOS 24h pos-trombolise (nao antes), Pantozol 40mg EV, Cabeceira elevada"},
+      "infecto": {"tmax": {"valor": 37.4, "n_maior_38": 0}, "atbs": [], "culturas": [], "leucocitos": "10200"},
+      "dvas": [],
+      "sedativos": [],
+      "prescricao": {
+        "cardiovascular": ["Clexane 40mg SC ACM", "Crestor 10mg SNE 1x/dia"],
+        "snc": [],
+        "gastro_endocrino": ["Pantozol 40mg EV Jejum"],
+        "infeccioso_resp": [],
+        "sintomaticos_sn": ["Novalgina 1g EV SN", "Zofran 8mg EV SN"],
+        "solucoes_diureticos": [],
+        "nutricao": ["Soro Glicosado 10% 500ml EV 8/8h", "Cloreto de Sodio 20% 10ml EV 8/8h", "Cloreto de Potassio 19,1% 5ml EV 8/8h", "Ringer Lactato 500ml EV ACM"]
+      },
+      "impressao": [
+        "Pos-trombolise - falha de enchimento na arteria basilar (compativel com oclusao); contexto a esclarecer",
+        "D-DIMERO 2.824 (muito elevado)",
+        "Hipercalemia limitrofe (K 5,0) - monitorar ECG, evitar agravantes"
+      ],
+      "conduta": [
+        "Hemodinamica: monitorizacao continua; PAM >= 65, sem necessidade de DVA",
+        "Respiratorio: manter CNL O2 2L/min; meta SpO2 >= 94%; gaso de controle em 6h; VNI se piora",
+        "Pos-trombolise: vigilancia de sangramento (neuro, gengiva, hematuria, sitio de puncao); coagulograma",
+        "Renal/Metabolico: monitorar K (5,0 limitrofe)",
+        "Nutricional: iniciar aporte calorico apos estabilizacao e exclusao de risco de aspiracao; TNE se jejum > 48h",
+        "Profilaxias: HNF profilatica APOS 24h pos-trombolise (nao antes)",
+        "Seguimento: definir equipe responsavel pelo evento trombolitico (Neuro vs Cardio vs Pneumo)"
+      ]
+    }
+  }
+]
