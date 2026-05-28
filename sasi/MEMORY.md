@@ -243,5 +243,9 @@ Symlinkadas pro Claude Code via `.claude/skills/`.
 
 ---
 
-**Última atualização:** 30-Abr-2026 (Fase A + D + Design bundle) · Stay hard. 🦅
+**Última atualização:** 09/05/2026 (após grande faxina de organização) · Stay hard. 🦅
+
+> **Importante:** O código foi movido para `sasi/` no topo do repositório.  
+> A pasta antiga "OPERAÇÃO SASI..." foi enviada para `archive/old-clinical-exports-2026-05/`.  
+> Consulte `STATUS.md` na raiz para a estrutura atualizada.
 

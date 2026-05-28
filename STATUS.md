@@ -129,11 +129,17 @@ sasi/                               ← NOVO LOCAL CANÔNICO (após faxina 09/05
 - `.gitignore` reforçado com seção "FAXINA 09/05/2026".
 - Novo local canônico de desenvolvimento: `cd sasi && npm run dev`
 
-**Estrutura final limpa:**
-- `sasi/` → código ativo (o que realmente importa e está em produção)
-- `archive/` → tudo que foi aposentado de forma organizada e reversível
-- `supabase/` + `.github/` + docs → mantidos na raiz
-- Legado antigo (`src/App.jsx` etc.) → preservado em `archive/old-root-code/` para histórico
+**Estrutura final limpa (após faxina completa 09/05/2026):**
+- `sasi/` → código ativo (único lugar que você deve trabalhar)
+- `archive/` → todo o lixo histórico organizado (session-copies, legacy-firebase, design-prototypes, old-clinical-exports, sensitive)
+- `supabase/` + `.github/` → mantidos na raiz
+- Tudo mais (APPS_BETA, Tags, y, src antigo, dist, public, arquivos .docx de chaves, etc.) → deve ser deletado manualmente pelo usuário (ver seção "Ações Manuais Recomendadas" no final deste arquivo)
+
+**⚠️ Arquivos sensíveis ainda na raiz (ação urgente):**
+- `Chaves, Senhas e Acesso a Sistemas (Ficheiro Antigravity).docx`
+- `Links e APIKEYs.docx`
+
+Esses dois arquivos contêm credenciais. Delete-os imediatamente (eles já estão no .gitignore).
 
 **Duplicatas de sessão (worktrees gerados por IA):**
 - `sasi-frontend/elegant-hypatia-bb4773/`, `friendly-jones-cec0ec/`, `sweet-wing-572e9b/`, etc.
@@ -227,12 +233,54 @@ Ver arquivo completo: [AGENTS.md](AGENTS.md)
 **Produção estável** com bypass de auth. Código ativo saudável (typecheck + build limpos). Maior risco atual = fragmentação do repositório + drift de schema + dependência do bypass de autenticação.
 
 **Stay hard.**  
-— Revisão realizada em 09/05/2026 por Grok (xAI) a pedido do usuário.
+— Faxina completa realizada em 09/05/2026 por Grok (com autorização total do usuário).
 
 ---
 
-*Referências rápidas:*  
-- Código ativo: `OPERAÇÃO SASI — Sistema de Auditoria e Síntese Intensiva/sasi-frontend/`  
-- Deploy: Netlify `sasi-uti`  
+## Ações Manuais Recomendadas (Faça agora)
+
+Depois de dar `git pull`, execute estas ações rápidas:
+
+### 1. Delete os arquivos sensíveis (URGENTE - contêm chaves)
+Delete diretamente no Windows Explorer:
+- `Chaves, Senhas e Acesso a Sistemas (Ficheiro Antigravity).docx`
+- `Links e APIKEYs.docx`
+
+Eles já estão no `.gitignore`, mas é mais seguro removê-los fisicamente.
+
+### 2. Delete o que sobrou de lixo na raiz (opcional mas recomendado)
+Você pode deletar com segurança:
+- `APPS_BETA_VERSOES_ANTERIORES/`
+- `bradlc.vscode-tailwindcss-0.14.29.vsix`
+- `extract.cjs`
+- `gemini_code_extracted.tsx`
+- `index.html`
+- `install.cmd`
+- `postcss.config.js`
+- `tailwind.config.js`
+- `vite.config.js`
+- Qualquer outro arquivo pequeno estranho que não seja `.md`, `.json` de config ou `eslint.config.js`
+
+### 3. Configuração do Netlify (importante para deploy continuar funcionando)
+Acesse https://app.netlify.com/projects/sasi-uti/configuration/general
+
+- **Base directory**: mude de (vazio ou caminho antigo longo) para **`sasi`**
+- **Build command**: `npm run build` (já deve estar correto)
+- **Publish directory**: `sasi/dist`
+
+Depois disso, faça um "Clear cache and deploy site" para testar.
+
+### 4. Commit e Push
+```bash
+git add -A
+git commit -m "chore: faxina final - remoção de lixo remanescente"
+git push
+```
+
+---
+
+*Referências rápidas (atualizado após faxina):*  
+- Código ativo: `sasi/`  
+- Deploy: Netlify `sasi-uti` (Base directory = `sasi` após ajuste manual)  
 - Supabase: projeto `idswehsvvqczzkiatuzu`  
 - Plano de auth: Google Drive (documento "Plano de ação login e autenticação SASI")
