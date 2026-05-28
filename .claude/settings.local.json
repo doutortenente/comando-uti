@@ -5,5 +5,9 @@
       "Bash(winget search *)",
       "Bash(npm install *)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ],
+  "enableAllProjectMcpServers": true
 }

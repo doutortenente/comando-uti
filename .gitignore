@@ -104,4 +104,11 @@ archive/
 
 # Artifacts pesados
 *.vsix
+
+# Configs de editor / Obsidian e testes MCP (não fazem parte do repo)
+.makemd/
+.obsidian/
+.space/
+claude-code-mcp-obsidian.json
+teste-mcp.md
 # === FIM BLINDAGEM =================================================
