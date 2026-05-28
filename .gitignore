@@ -48,6 +48,56 @@ Chaves, Senhas e Acesso a Sistemas (Ficheiro Antigravity).docx
 /codebase/
 /dataconnect/
 
+# === FAXINA SASI - 09/05/2026 =========================================
+# Tudo que foi movido para archive/ durante a grande organização.
+# Esses caminhos são mantidos aqui como defesa em profundidade.
+
+# Cópias duplicadas geradas por sessões de IA (nomes aleatórios)
+elegant-hypatia-bb4773/
+friendly-jones-cec0ec/
+sweet-wing-572e9b/
+compassionate-visvesvaraya-e38787/
+hopeful-meninsky-030dc6/
+sharp-bell-efee8f/
+
+# Codebases Firebase legadas (mortas após migração para Supabase)
+]ty/
+backend/
+base-de-dados-ggoggins/
+codebase/
+genkitggoggins/
+dataconnect/
+
+# Código antigo monolítico (raiz)
+src/
+public/
+postcss.config.js
+tailwind.config.js
+vite.config.js
+index.html
+install.cmd
+
+# Protótipos e extrações Gemini (design histórico apenas)
+gemini_code_extracted.tsx
+extract.cjs
+sasi-frontend/sasi/project/
+sasi-frontend/sasi/uploads/
+
+# Extensões e lixo de IDE
+*.vsix
+
+# Pastas suspeitas / beta antigas
+APPS_BETA_VERSOES_ANTERIORES/
+Tags/
+y/
+
+# Arquivos de chaves/senhas (já movidos para archive/sensitive)
+*Chaves*Senhas*.docx
+*Links*e*APIKEYs*.docx
+
+# Qualquer coisa dentro de archive/ (defesa extra)
+archive/
+
 # Stray junk (typos do shell)
 /]ty
 /{

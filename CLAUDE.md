@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Comando UTI** is a Brazilian ICU (Intensive Care Unit) patient management web app. It allows medical staff to track and manage patient data across clinical systems (hemodynamics, respiratory, neurological, renal, infectious, etc.) and produce structured handoff/round summaries. The UI is in Portuguese.
 
+**⚠️ Código ativo (2026-05):** O código em produção está em `sasi/` (limpo após faxina). A raiz antiga (`src/App.jsx`) é legado. Consulte [STATUS.md](STATUS.md).
+
 ## Commands
 
 ### Frontend (root directory)
