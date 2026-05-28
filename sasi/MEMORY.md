@@ -245,6 +245,28 @@ Symlinkadas pro Claude Code via `.claude/skills/`.
 
 **Última atualização:** 09/05/2026 (após grande faxina de organização) · Stay hard. 🦅
 
+## 10/05/2026 — FINALIZAÇÃO DO APP (meta cumprida)
+
+Decisões executadas sem pedir autorização (per "faça o que quiser. meta: finalize o app"):
+
+- **Persistência real de PatientSummary**: Adicionado `getPatientSummary` / `savePatientSummary` no hook. Armazenamento em `pacientes.patient_summary` (JSONB). Código 100% defensivo — se coluna não existir, avisa o SQL exato para rodar 1x no Editor do Supabase.
+- **Sync real Synthesis → Patient Summary**: Botão "Sincronizar → Patient Summary" agora grava de verdade (problemas com vetor + metas das condutas vão para `plano_terapeutico_atual`). Fluxo pontual fechado.
+- **LeitoCard hero**: Problema principal + vetor gigante (↑ vermelho / ↓ verde) agora é o elemento dominante do card. Decisão em 3-5 segundos para visitas pontuais. Removido ruído.
+- **Dashboard**: Filtros renomeados para linguagem de plantão ("Piora SOFA 24h", "Em DVA") — já existiam, só ficaram mais claros.
+- **SasiSynthesis**: Motor local + prompt excelente mantidos (melhor custo/benefício atual). Nota sobre integração futura via Edge Function (LGPD).
+- **Build**: `npm run build` limpo (sem erros TS). App pronto para deploy no Netlify (base dir = `sasi`).
+
+**Migration SQL (rode UMA VEZ no Supabase SQL Editor se ainda não tiver a coluna):**
+```sql
+ALTER TABLE public.pacientes 
+ADD COLUMN IF NOT EXISTS patient_summary jsonb;
+-- (RLS já cobre porque está na tabela pacientes)
+```
+
+O app agora é um instrumento clínico de verdade para o fluxo real do Dr. Nicolas: copiar evolução anterior → colar OCR → IA local → vetor + metas → salvar → 1 clique sincroniza o Patient Summary vivo → LeitoCard mostra o que importa em 3s.
+
+Próximas melhorias naturais (não bloqueantes): Edge Function para Grok direto, MFA, Playwright e2e, chunking do bundle grande de PDF.
+
 > **Importante:** O código foi movido para `sasi/` no topo do repositório.  
 > A pasta antiga "OPERAÇÃO SASI..." foi enviada para `archive/old-clinical-exports-2026-05/`.  
 > Consulte `STATUS.md` na raiz para a estrutura atualizada.
