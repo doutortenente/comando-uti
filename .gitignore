@@ -68,13 +68,13 @@ codebase/
 genkitggoggins/
 dataconnect/
 
-# Código antigo monolítico (raiz) — só na raiz, não afetar sasi/src/
+# Código antigo monolítico (raiz) — só na raiz, não afetar sasi/
  /src/
-public/
+/public/
 postcss.config.js
 tailwind.config.js
 vite.config.js
-index.html
+/index.html
 install.cmd
 
 # Protótipos e extrações Gemini (design histórico apenas)

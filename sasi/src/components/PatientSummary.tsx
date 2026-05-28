@@ -21,8 +21,17 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
     return (
       <div className="bg-app-card border border-app-border rounded-2xl p-6 text-center">
         <p className="text-app-text-muted text-sm">Nenhum Patient Summary para esta admissão ainda.</p>
+        <p className="text-[11px] text-app-text-muted mt-1">Crie um resumo vivo da admissão com dispositivos, metas e plano terapêutico.</p>
         <button 
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            // Pre-fill reasonable defaults when creating new
+            setDraft({
+              data_admissao: new Date().toISOString(),
+              dispositivos: [],
+              suporte_atual: {},
+            });
+            setIsEditing(true);
+          }}
           className="mt-3 text-xs px-4 py-1.5 bg-app-accent hover:bg-app-accent-hover text-white rounded-lg"
         >
           Criar Patient Summary
@@ -34,6 +43,9 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
   const handleSave = () => {
     if (onSave && draft) {
       const updated = {
+        id: (summary as any)?.id || crypto.randomUUID?.() || `ps_${Date.now()}`,
+        paciente_id: (summary as any)?.paciente_id || '',
+        data_admissao: draft.data_admissao || (summary as any)?.data_admissao || new Date().toISOString(),
         ...(summary || {}),
         ...draft,
         ultima_atualizacao: new Date().toISOString(),
@@ -114,6 +126,14 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
             </div>
 
             <div>
+              <div className="font-bold text-xs text-amber-400 mb-1">PESO / ALTURA</div>
+              <p className="text-app-text-2">
+                {current?.peso ? `${current.peso} kg` : '—'} 
+                {current?.altura ? ` / ${current.altura} cm` : ''}
+              </p>
+            </div>
+
+            <div>
               <div className="font-bold text-xs text-sky-400 mb-1 flex items-center gap-1">
                 <Activity className="w-3 h-3" /> DISPOSITIVOS
               </div>
@@ -140,7 +160,12 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
 
           {current?.plano_terapeutico_atual && (
             <div>
-              <div className="font-bold text-xs text-emerald-400 mb-1">PLANO TERAPÊUTICO ATUAL</div>
+              <div className="font-bold text-xs text-emerald-400 mb-1 flex items-center gap-2">
+                PLANO TERAPÊUTICO ATUAL / METAS
+                {current.plano_terapeutico_atual.includes('Última síntese SASI') && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-medium">Sincronizado via SASI</span>
+                )}
+              </div>
               <p className="text-sm text-app-text-2 whitespace-pre-wrap">{current.plano_terapeutico_atual}</p>
             </div>
           )}
@@ -176,6 +201,29 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
                 onChange={(e) => setDraft({ ...draft, alergias: e.target.value })}
                 className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm"
                 placeholder="Ex: Digesan"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-amber-400 mb-1">PESO (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={draft.peso || ''}
+                onChange={(e) => setDraft({ ...draft, peso: e.target.value ? parseFloat(e.target.value) : undefined })}
+                className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm"
+                placeholder="Ex: 78.5"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-amber-400 mb-1">ALTURA (cm)</label>
+              <input
+                type="number"
+                value={draft.altura || ''}
+                onChange={(e) => setDraft({ ...draft, altura: e.target.value ? parseInt(e.target.value) : undefined })}
+                className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm"
+                placeholder="Ex: 175"
               />
             </div>
           </div>

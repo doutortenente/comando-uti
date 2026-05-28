@@ -3,8 +3,8 @@
 // Hero: Problemas Ativos com Vetor ↑/↓/= | border-l gravidade | SOFA badge
 // ============================================================================
 import {
-  Activity, AlertTriangle, Clock, Droplets, Flame, Heart,
-  Skull, TrendingDown, TrendingUp, Wind, Pill,
+  Activity, AlertTriangle, Droplets, Flame, Heart,
+  Skull, Wind, Pill,
 } from 'lucide-react';
 import type { DashboardRow } from '../lib/supabaseClient';
 import { sofaColorClass } from '../lib/drugs';
@@ -79,8 +79,6 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
   const deltaIsGood = delta != null && delta < 0;
   const dvaCount = Array.isArray(row.dvas) ? row.dvas.length : 0;
   const sedCount = Array.isArray(row.sedativos) ? row.sedativos.length : 0;
-  const dvaNames = infusionNames(row.dvas ?? []);
-  const sedNames = infusionNames(row.sedativos ?? []);
 
   const isSeptic = (row.sofa_total ?? 0) >= 2 && delta != null && delta >= 2;
 

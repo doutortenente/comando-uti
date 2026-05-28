@@ -278,8 +278,11 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
 
       await savePatientSummary(paciente.id, novoSummary);
 
-      setSyncMsg('✓ Sincronizado! Patient Summary atualizado com problemas + metas.');
-      setTimeout(() => setSyncMsg(null), 4200);
+      const isNew = !current;
+      setSyncMsg(isNew 
+        ? '✓ Patient Summary criado e sincronizado com a síntese SASI!' 
+        : '✓ Sincronizado! Metas e problemas atualizados no Patient Summary.');
+      setTimeout(() => setSyncMsg(null), 5200);
     } catch (e: any) {
       const msg = e?.message?.includes('patient_summary')
         ? 'Coluna patient_summary ainda não existe — rode o ALTER TABLE uma vez no Supabase SQL Editor.'
@@ -1576,17 +1579,20 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           </span>
         )}
 
-        {/* Sync real Synthesis → Patient Summary (finalização do fluxo pontual) */}
-        {(problemasAtivosDraft.length > 0 || condutasSistemasDraft.length > 0) && saveMsg?.ok && (
+        {/* Sync real Synthesis → Patient Summary (fluxo pontual) */}
+        {(problemasAtivosDraft.length > 0 || condutasSistemasDraft.length > 0) && (
           <button
             onClick={handleSyncToPatientSummary}
-            className="ml-3 text-xs px-3 py-1 rounded bg-sky-600 hover:bg-sky-700 text-white font-medium flex items-center gap-1"
+            disabled={saving}
+            className="ml-3 text-xs px-3 py-1 rounded bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white font-medium flex items-center gap-1"
           >
             Sincronizar → Patient Summary
           </button>
         )}
         {syncMsg && (
-          <span className="ml-2 text-xs text-sky-400 font-medium">{syncMsg}</span>
+          <span className={`ml-2 text-xs font-medium ${syncMsg.startsWith('✓') ? 'text-emerald-400' : 'text-amber-400'}`}>
+            {syncMsg}
+          </span>
         )}
       </div>
 
