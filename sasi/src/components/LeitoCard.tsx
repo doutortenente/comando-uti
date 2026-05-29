@@ -20,16 +20,6 @@ type ProblemaDisplay = {
   vetor: '↑' | '↓' | '=' | null;
 };
 
-function infusionNames(arr: unknown[]): string[] {
-  if (!Array.isArray(arr)) return [];
-  return arr.map(item => {
-    if (typeof item === 'string') return item;
-    if (item && typeof item === 'object' && 'droga' in item)
-      return String((item as Record<string, unknown>).droga);
-    return '';
-  }).filter(Boolean);
-}
-
 function detectSupport(resp: Record<string, unknown> | null | undefined): { vm: boolean; vni: boolean } {
   if (!resp) return { vm: false, vni: false };
   const suporte = String(resp.suporte ?? resp.modo_ventilatorio ?? resp.via_aerea ?? '');

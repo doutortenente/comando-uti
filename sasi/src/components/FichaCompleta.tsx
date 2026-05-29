@@ -239,7 +239,6 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
   const handleSyncToPatientSummary = useCallback(async () => {
     if (!paciente?.id) return;
 
-    setSyncMsg(null);
     setSyncing(true);
 
     try {
@@ -286,12 +285,12 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
         ? 'Patient Summary criado e sincronizado com a síntese SASI!'
         : 'Metas e problemas atualizados no Patient Summary.';
       
-      addToast(message, 'success');
+      addToast('success', message);
     } catch (e: any) {
       const msg = e?.message?.includes('patient_summary')
         ? 'Coluna patient_summary ainda não existe — rode o ALTER TABLE no Supabase.'
         : 'Erro ao sincronizar: ' + (e?.message || 'Tente novamente.');
-      addToast(msg, 'error');
+      addToast('danger', msg);
     } finally {
       setSyncing(false);
     }
