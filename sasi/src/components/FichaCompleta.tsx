@@ -77,6 +77,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const { getPatientSummary, savePatientSummary } = useSupabasePatients();
 
@@ -238,6 +239,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
     if (!paciente?.id) return;
 
     setSyncMsg(null);
+    setSyncing(true);
 
     try {
       const current = await getPatientSummary(paciente.id);
@@ -289,6 +291,8 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
         : 'Erro no sync: ' + (e?.message || e);
       setSyncMsg(msg);
       setTimeout(() => setSyncMsg(null), 6000);
+    } finally {
+      setSyncing(false);
     }
   }, [paciente, problemasAtivosDraft, condutasSistemasDraft, getPatientSummary, savePatientSummary]);
 
@@ -1583,10 +1587,10 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
         {(problemasAtivosDraft.length > 0 || condutasSistemasDraft.length > 0) && (
           <button
             onClick={handleSyncToPatientSummary}
-            disabled={saving}
+            disabled={saving || syncing}
             className="ml-3 text-xs px-3 py-1 rounded bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white font-medium flex items-center gap-1"
           >
-            Sincronizar → Patient Summary
+            {syncing ? 'Sincronizando...' : 'Sincronizar → Patient Summary'}
           </button>
         )}
         {syncMsg && (

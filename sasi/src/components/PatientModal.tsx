@@ -260,6 +260,7 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [sofaHistory, setSofaHistory] = useState<EventoClinico[]>([]);
   const [patientSummary, setPatientSummary] = useState<PatientSummary | null>(null);
+  const [patientSummaryLoading, setPatientSummaryLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showTimeline, setShowTimeline] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -296,11 +297,14 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
     setSofaHistory(sofaRes.data ?? []);
 
     // Carrega PatientSummary (defensivo — se coluna não existir ainda, fica null)
+    setPatientSummaryLoading(true);
     try {
       const ps = await getPatientSummary(pacienteId);
       setPatientSummary(ps);
     } catch {
       setPatientSummary(null);
+    } finally {
+      setPatientSummaryLoading(false);
     }
 
     setLoading(false);
@@ -499,12 +503,16 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                 <>
                   <PatientSummaryView 
                     summary={patientSummary} 
+                    loading={patientSummaryLoading}
                     onSave={async (updated) => {
                       try {
                         await savePatientSummary(pacienteId, updated);
                         setPatientSummary(updated as PatientSummary);
                       } catch (e: any) {
-                        alert('Erro ao salvar Patient Summary: ' + (e?.message || e));
+                        const msg = e?.message?.includes('patient_summary') 
+                          ? 'Coluna patient_summary ainda não existe no banco. Rode o ALTER TABLE no Supabase SQL Editor.'
+                          : 'Erro ao salvar Patient Summary: ' + (e?.message || e);
+                        alert(msg);
                       }
                     }}
                     onEdit={() => { /* opcional: pode focar a aba de edição */ }}

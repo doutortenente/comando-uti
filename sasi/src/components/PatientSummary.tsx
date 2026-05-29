@@ -9,12 +9,14 @@ import { useState } from 'react';
 
 interface Props {
   summary?: PatientSummaryType | null;
+  loading?: boolean;
   onSave?: (updated: PatientSummaryType) => void;
   onEdit?: () => void;
 }
 
-export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
+export default function PatientSummaryView({ summary, loading = false, onSave, onEdit }: Props) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [draft, setDraft] = useState<Partial<PatientSummaryType>>(summary || {});
 
   if (!summary && !isEditing) {
@@ -40,8 +42,9 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
     );
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (onSave && draft) {
+      setIsSaving(true);
       const updated = {
         id: (summary as any)?.id || crypto.randomUUID?.() || `ps_${Date.now()}`,
         paciente_id: (summary as any)?.paciente_id || '',
@@ -50,9 +53,15 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
         ...draft,
         ultima_atualizacao: new Date().toISOString(),
       } as PatientSummaryType;
-      onSave(updated);
+      try {
+        await onSave(updated);
+      } finally {
+        setIsSaving(false);
+        setIsEditing(false);
+      }
+    } else {
+      setIsEditing(false);
     }
-    setIsEditing(false);
   };
 
   const handleCancel = () => {
@@ -61,6 +70,16 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
   };
 
   const current = isEditing ? draft : summary;
+
+  if (loading && !isEditing) {
+    return (
+      <div className="bg-app-card border border-app-border rounded-2xl p-5">
+        <div className="flex items-center gap-2 text-sm text-app-text-muted">
+          <div className="animate-pulse">Carregando Patient Summary...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-app-card border border-app-border rounded-2xl p-5 space-y-4">
@@ -80,13 +99,15 @@ export default function PatientSummaryView({ summary, onSave, onEdit }: Props) {
             <>
               <button 
                 onClick={handleSave}
-                className="flex items-center gap-1 text-xs px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={isSaving}
+                className="flex items-center gap-1 text-xs px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-white"
               >
-                <Save className="w-3.5 h-3.5" /> Salvar
+                <Save className="w-3.5 h-3.5" /> {isSaving ? 'Salvando...' : 'Salvar'}
               </button>
               <button 
                 onClick={handleCancel}
-                className="flex items-center gap-1 text-xs px-3 py-1 rounded bg-app-tertiary hover:bg-app-border text-app-text"
+                disabled={isSaving}
+                className="flex items-center gap-1 text-xs px-3 py-1 rounded bg-app-tertiary hover:bg-app-border text-app-text disabled:opacity-60"
               >
                 <X className="w-3.5 h-3.5" /> Cancelar
               </button>
