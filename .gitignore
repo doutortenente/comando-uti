@@ -102,6 +102,20 @@ archive/
 /]ty
 /{
 
+# AI Coding Tools (Claude Code, Cursor, Windsurf, etc.)
+.claude/
+.agents/
+.cursor/
+.windsurf/
+*worktree*/
+claude-code-*.json
+*claude*.log
+
+# Local test / scratch files
+teste-*.md
+scratch.*
+tmp/
+
 # Artifacts pesados
 *.vsix
 
