@@ -3,6 +3,7 @@
 // Edição inline em todos os 7 sistemas + identificação + impressão/conduta/pendências
 // ============================================================================
 import { useState, useCallback, useEffect } from 'react';
+import { useToasts } from '../lib/useToasts';
 import {
   Brain, Wind, Heart, Utensils, FlaskConical, TestTube, Bug,
   Syringe, Clipboard, Droplets, Activity, Pill, AlertTriangle,
@@ -76,10 +77,10 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const { getPatientSummary, savePatientSummary } = useSupabasePatients();
+  const { addToast } = useToasts();
 
   // Accordions state
   const [openSec, setOpenSec] = useState<Record<string, boolean>>({
@@ -281,16 +282,16 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
       await savePatientSummary(paciente.id, novoSummary);
 
       const isNew = !current;
-      setSyncMsg(isNew 
-        ? '✓ Patient Summary criado e sincronizado com a síntese SASI!' 
-        : '✓ Sincronizado! Metas e problemas atualizados no Patient Summary.');
-      setTimeout(() => setSyncMsg(null), 5200);
+      const message = isNew 
+        ? 'Patient Summary criado e sincronizado com a síntese SASI!'
+        : 'Metas e problemas atualizados no Patient Summary.';
+      
+      addToast(message, 'success');
     } catch (e: any) {
       const msg = e?.message?.includes('patient_summary')
-        ? 'Coluna patient_summary ainda não existe — rode o ALTER TABLE uma vez no Supabase SQL Editor.'
-        : 'Erro no sync: ' + (e?.message || e);
-      setSyncMsg(msg);
-      setTimeout(() => setSyncMsg(null), 6000);
+        ? 'Coluna patient_summary ainda não existe — rode o ALTER TABLE no Supabase.'
+        : 'Erro ao sincronizar: ' + (e?.message || 'Tente novamente.');
+      addToast(msg, 'error');
     } finally {
       setSyncing(false);
     }
@@ -1583,21 +1584,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           </span>
         )}
 
-        {/* Sync real Synthesis → Patient Summary (fluxo pontual) */}
-        {(problemasAtivosDraft.length > 0 || condutasSistemasDraft.length > 0) && (
-          <button
-            onClick={handleSyncToPatientSummary}
-            disabled={saving || syncing}
-            className="ml-3 text-xs px-3 py-1 rounded bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white font-medium flex items-center gap-1"
-          >
-            {syncing ? 'Sincronizando...' : 'Sincronizar → Patient Summary'}
-          </button>
-        )}
-        {syncMsg && (
-          <span className={`ml-2 text-xs font-medium ${syncMsg.startsWith('✓') ? 'text-emerald-400' : 'text-amber-400'}`}>
-            {syncMsg}
-          </span>
-        )}
+        {/* Old sync button removed — now promoted near the structured synthesis for better discoverability */}
       </div>
 
       {/* === SÍNTESE CLÍNICA: Texto Livre + Estruturada (ambas disponíveis) === */}
@@ -1664,6 +1651,26 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
               setCondutasSistemasDraft(conds);
             }}
           />
+
+          {/* Sync action - prominent after structured synthesis */}
+          {(problemasAtivosDraft.length > 0 || condutasSistemasDraft.length > 0) && (
+            <div className="mt-4 p-4 bg-sky-500/10 border border-sky-500/30 rounded-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-sky-300">Dados estruturados prontos</div>
+                  <div className="text-xs text-sky-400">Sincronize problemas + metas com o Patient Summary da admissão.</div>
+                </div>
+                <button
+                  onClick={handleSyncToPatientSummary}
+                  disabled={saving || syncing}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-sm font-bold transition whitespace-nowrap"
+                >
+                  {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {syncing ? 'Sincronizando...' : 'Sincronizar com Patient Summary'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
