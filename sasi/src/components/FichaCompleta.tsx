@@ -1654,16 +1654,16 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
 
           {/* Sync action - prominent after structured synthesis */}
           {(problemasAtivosDraft.length > 0 || condutasSistemasDraft.length > 0) && (
-            <div className="mt-4 p-4 bg-sky-500/10 border border-sky-500/30 rounded-xl">
+            <div className="mt-4 p-4 bg-sky-500/10 border-2 border-sky-400/70 rounded-2xl shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-sky-300">Dados estruturados prontos</div>
-                  <div className="text-xs text-sky-400">Sincronize problemas + metas com o Patient Summary da admissão.</div>
+                  <div className="text-sm font-semibold text-sky-200">Dados estruturados prontos</div>
+                  <div className="text-xs text-sky-300 mt-0.5">Sincronize problemas + metas com o Patient Summary da admissão.</div>
                 </div>
                 <button
                   onClick={handleSyncToPatientSummary}
                   disabled={saving || syncing}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-sm font-bold transition whitespace-nowrap"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-60 text-white text-sm font-bold transition whitespace-nowrap shadow-sm"
                 >
                   {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   {syncing ? 'Sincronizando...' : 'Sincronizar com Patient Summary'}
