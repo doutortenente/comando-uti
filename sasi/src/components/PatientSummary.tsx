@@ -135,6 +135,13 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
             <p className="text-app-text-2 leading-snug">{current?.motivo_admissao || '—'}</p>
           </div>
 
+          {current?.hpma && (
+            <div>
+              <div className="font-bold text-xs text-amber-400 mb-1">HPMA (História da Doença Atual)</div>
+              <p className="text-app-text-2 whitespace-pre-wrap leading-snug">{current.hpma}</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             <div>
               <div className="font-bold text-xs text-amber-400 mb-1">ANTECEDENTES RELEVANTES</div>
@@ -161,7 +168,7 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
               {current?.dispositivos?.length ? (
                 <ul className="text-xs space-y-0.5 text-app-text-2">
                   {current.dispositivos.map((d, i) => (
-                    <li key={i}>• {d.tipo} {d.local && `(${d.local})`} {d.data_insercao && `— ${d.data_insercao}`}</li>
+                    <li key={i}>• {d.tipo} {d.local && `@${d.local}`} {d.data_insercao && `— ${d.data_insercao}`}</li>
                   ))}
                 </ul>
               ) : <span className="text-xs text-app-text-muted">Nenhum</span>}
@@ -190,6 +197,20 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
               <p className="text-sm text-app-text-2 whitespace-pre-wrap">{current.plano_terapeutico_atual}</p>
             </div>
           )}
+
+          {current?.medicamentos_domiciliares && current.medicamentos_domiciliares.length > 0 && (
+            <div>
+              <div className="font-bold text-xs text-purple-400 mb-1">MEDICAMENTOS DOMICILIARES</div>
+              <p className="text-xs text-app-text-2">{current.medicamentos_domiciliares.join(' • ')}</p>
+            </div>
+          )}
+
+          {current?.exames_relevantes && (
+            <div>
+              <div className="font-bold text-xs text-sky-400 mb-1">EXAMES RELEVANTES</div>
+              <p className="text-sm text-app-text-2 whitespace-pre-wrap">{current.exames_relevantes}</p>
+            </div>
+          )}
         </div>
       ) : (
         // EDIÇÃO
@@ -201,6 +222,16 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
               onChange={(e) => setDraft({ ...draft, motivo_admissao: e.target.value })}
               className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm h-20"
               placeholder="Ex: Choque cardiogênico / ICFEr crítica pós implante CDI-RV"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-amber-400 mb-1">HPMA (História da Doença Atual)</label>
+            <textarea
+              value={draft.hpma || ''}
+              onChange={(e) => setDraft({ ...draft, hpma: e.target.value })}
+              className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm h-28"
+              placeholder="Resumo da história clínica atual que motivou a internação..."
             />
           </div>
 
@@ -263,8 +294,19 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
                       newList[i] = { ...newList[i], tipo: e.target.value };
                       setDraft({ ...draft, dispositivos: newList });
                     }}
-                    placeholder="Tipo (ex: CDI-RV, POWERPICC)"
+                    placeholder="Tipo (ex: CDI-RV)"
                     className="flex-1 bg-app-tertiary border border-app-border rounded px-2 py-1 text-xs"
+                  />
+                  <input
+                    type="text"
+                    value={d.local || ''}
+                    onChange={(e) => {
+                      const newList = [...(draft.dispositivos || [])];
+                      newList[i] = { ...newList[i], local: e.target.value };
+                      setDraft({ ...draft, dispositivos: newList });
+                    }}
+                    placeholder="Local (ex: VE)"
+                    className="w-24 bg-app-tertiary border border-app-border rounded px-2 py-1 text-xs"
                   />
                   <input
                     type="text"
@@ -274,8 +316,8 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
                       newList[i] = { ...newList[i], data_insercao: e.target.value };
                       setDraft({ ...draft, dispositivos: newList });
                     }}
-                    placeholder="Data inserção"
-                    className="w-32 bg-app-tertiary border border-app-border rounded px-2 py-1 text-xs"
+                    placeholder="Data"
+                    className="w-24 bg-app-tertiary border border-app-border rounded px-2 py-1 text-xs"
                   />
                   <button onClick={() => {
                     const newList = (draft.dispositivos || []).filter((_, idx) => idx !== i);
@@ -288,7 +330,7 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
               <button 
                 onClick={() => setDraft({ 
                   ...draft, 
-                  dispositivos: [...(draft.dispositivos || []), { tipo: '', data_insercao: '' }] 
+                  dispositivos: [...(draft.dispositivos || []), { tipo: '', local: '', data_insercao: '' }] 
                 })}
                 className="text-xs flex items-center gap-1 text-sky-400"
               >
@@ -304,6 +346,29 @@ export default function PatientSummaryView({ summary, loading = false, onSave, o
               onChange={(e) => setDraft({ ...draft, plano_terapeutico_atual: e.target.value })}
               className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm h-24"
               placeholder="Ex: Meta balanço negativo agressivo + PAM ≥ 65 + Diurese > 0.5 ml/kg/h"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-purple-400 mb-1">MEDICAMENTOS DE USO DOMICILIAR</label>
+            <textarea
+              value={(draft.medicamentos_domiciliares || []).join('\n')}
+              onChange={(e) => {
+                const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean);
+                setDraft({ ...draft, medicamentos_domiciliares: lines });
+              }}
+              className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm h-16"
+              placeholder="Um medicamento por linha (ex: Losartana 50mg)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-sky-400 mb-1">EXAMES RELEVANTES PRÉVIOS</label>
+            <textarea
+              value={draft.exames_relevantes || ''}
+              onChange={(e) => setDraft({ ...draft, exames_relevantes: e.target.value })}
+              className="w-full bg-app-tertiary border border-app-border rounded-lg p-2 text-sm h-20"
+              placeholder="Ex: ECO com FEVE 25%, Cateterismo 2024 com lesão triarterial..."
             />
           </div>
         </div>
