@@ -243,7 +243,16 @@ Symlinkadas pro Claude Code via `.claude/skills/`.
 
 ---
 
-**Última atualização:** 09/05/2026 (após grande faxina de organização) · Stay hard. 🦅
+**Última atualização:** 28/05/2026 (após grande faxina de organização + estabilização do fluxo SASI v2.0)
+
+## 28/05/2026 — Limpeza de repositório (Opção C)
+
+- Removidas todas as branches locais `claude/*` (worktrees de sessões paralelas antigas).
+- Removidas tracking branches antigas (`origin/claude/*`, `origin/gemini`, `origin/feat/plano-alpha` etc).
+- Melhorado `.gitignore` para ignorar artefatos de ferramentas de IA (`.claude/`, `.agents/`, worktrees, scratch files).
+- Repositório agora muito mais limpo: apenas `main` + origin/main.
+
+O repositório está em bom estado para continuar o desenvolvimento focado no app em `sasi/`.
 
 ## 10/05/2026 — FINALIZAÇÃO DO APP (meta cumprida)
 
