@@ -74,8 +74,10 @@ export function useClinicalAlerts(): UseClinicalAlertsReturn {
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
     }
+    // Nome único por inscrição (ver useSupabasePatients): evita reusar canal
+    // já inscrito sob StrictMode e o erro "add callbacks after subscribe()".
     const channel = supabase
-      .channel('sasi-alerts-realtime')
+      .channel(`sasi-alerts-realtime-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts_log' }, () => {
         void load();
       })

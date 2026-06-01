@@ -95,8 +95,12 @@ export function useSupabasePatients(): UseSupabasePatientsReturn {
       supabase.removeChannel(channelRef.current);
     }
 
+    // Nome único por inscrição: supabase.channel() reaproveita o canal por
+    // tópico. Sob StrictMode (efeito roda 2x), reusar o mesmo nome devolve o
+    // canal JÁ inscrito, e encadear .on() depois do subscribe() lança
+    // "cannot add postgres_changes callbacks ... after subscribe()".
     const channel = supabase
-      .channel('sasi-uti-realtime')
+      .channel(`sasi-uti-realtime-${crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pacientes' }, () => {
         loadPatients();
         loadDashboard();

@@ -20,6 +20,7 @@ import {
   type EventoClinico,
 } from '../lib/supabaseClient';
 import { sofaColorClass, SYSTEM_COLORS, CLINICAL_LABELS } from '../lib/drugs';
+import { clinicalText, hasClinicalContent } from '../lib/clinicalFormat';
 import InfusionEditor, { type Infusion } from './InfusionEditor';
 import MiniChart from './MiniChart';
 import { ModalSkeleton, EmptyState } from './Skeletons';
@@ -142,9 +143,7 @@ function ClinicalSystemBlock({
   }
 
   // Filtra nulos/vazios e renderiza com labels traduzidos
-  const entries = Object.entries(data).filter(
-    ([, v]) => v != null && v !== '' && v !== false
-  );
+  const entries = Object.entries(data).filter(([, v]) => hasClinicalContent(v));
 
   return (
     <div className={`sys-${systemKey} rounded-r-xl border-l-4 p-3 ${color?.border ?? ''} ${color?.bg ?? 'bg-app-card'}`}>
@@ -156,8 +155,7 @@ function ClinicalSystemBlock({
       <div className="space-y-0.5">
         {entries.map(([k, v]) => {
           const label = labels[k] ?? k.replace(/_/g, ' ');
-          const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
-          return <Field key={k} label={label} value={val} />;
+          return <Field key={k} label={label} value={clinicalText(v)} />;
         })}
       </div>
     </div>
@@ -645,8 +643,8 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                         ...(evolucao.resp as Record<string, unknown> ?? {}),
                         tax: ((evolucao.infecto as Record<string, unknown>)?.tmax ?? (evolucao.infecto as Record<string, unknown>)?.temperatura ?? (evolucao.infecto as Record<string, unknown>)?.temp) as string | number | undefined,
                         dx: ((evolucao.tgi as Record<string, unknown>)?.dx ?? (evolucao.tgi as Record<string, unknown>)?.glicemia) as string | number | undefined,
-                        bh: ((evolucao.renal as Record<string, unknown>)?.bh ?? (evolucao.renal as Record<string, unknown>)?.balanco_hidrico) as string | number | undefined,
-                        diurese: ((evolucao.renal as Record<string, unknown>)?.diurese ?? (evolucao.renal as Record<string, unknown>)?.diurese_24h) as string | number | undefined,
+                        bh: ((evolucao.renal as Record<string, unknown>)?.bh_ml ?? (evolucao.renal as Record<string, unknown>)?.bh ?? (evolucao.renal as Record<string, unknown>)?.balanco_hidrico) as string | number | undefined,
+                        diurese: ((evolucao.renal as Record<string, unknown>)?.diurese_total_ml ?? (evolucao.renal as Record<string, unknown>)?.diurese ?? (evolucao.renal as Record<string, unknown>)?.diurese_24h) as string | number | undefined,
                       }}
                       labs={{
                         hb: (evolucao.hemato as Record<string, unknown>)?.hb as string | undefined,

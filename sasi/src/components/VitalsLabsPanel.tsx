@@ -11,6 +11,7 @@ import {
   VITAL_THRESHOLDS, LAB_REFERENCES,
   checkVitalAlert, checkLabAlert,
 } from '../lib/drugs';
+import { clinicalNum, clinicalRange } from '../lib/clinicalFormat';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,9 +98,12 @@ function VitalCard({
   const t = VITAL_THRESHOLDS[thresholdKey];
   if (!t) return null;
 
-  const numVal = parseNum(value);
-  const numMax = parseNum(maxVal);
-  const numMin = parseNum(minVal);
+  // O modelo SASI v2.0 guarda objetos {max,min,valor}; aceita tanto escalar
+  // (campos *_max/_min separados) quanto o objeto inteiro em `value`.
+  const range = clinicalRange(value);
+  const numVal = parseNum(value) ?? clinicalNum(value);
+  const numMax = parseNum(maxVal) ?? range?.max ?? null;
+  const numMin = parseNum(minVal) ?? range?.min ?? null;
   const displayVal = numMax != null ? numMax : numVal;
   const status = displayVal != null ? checkVitalAlert(thresholdKey, displayVal) : 'ok';
   const hasRange = numMax != null && numMin != null;

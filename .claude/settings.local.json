@@ -3,11 +3,12 @@
     "allow": [
       "Bash(winget install *)",
       "Bash(winget search *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "PowerShell(wsl --list --verbose 2>$null)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }
