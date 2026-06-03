@@ -221,3 +221,26 @@ npm run dev         # dev server em http://localhost:5173
 ```
 
 O app abre direto no Dashboard (sem login). Para ver dados, e preciso ter pacientes no Supabase.
+
+---
+
+## 12. Sincronizacao bidirecional Notebook <-> Jarvis (VPS) — CRITICO
+
+Este repositorio e sincronizado AUTOMATICAMENTE entre o notebook do Dr. Nicolas e o
+agente Jarvis (Hermes) no VPS Hostinger. NAO e so um clone — e espelho via git.
+
+- **Notebook:** Tarefa Agendada Windows `JarvisSyncComandoUTI`, a cada 2 min, roda
+  `C:\Users\Usuario\jarvis\sync-comando-uti.ps1` (add -> commit -> pull --rebase -> push).
+- **Jarvis/VPS:** cron a cada 2 min roda `/opt/data/projects/sync-comando-uti.sh` dentro do
+  container `hermes-agent-hci6-hermes-agent-1`. Repo em `/opt/data/projects/comando-uti`.
+- **Fonte da verdade:** GitHub `doutortenente/comando-uti` (branch `main`).
+
+### Regras para QUALQUER agente (Jarvis ou Claude) editando este repo:
+- **NUNCA** `git reset --hard`, `git push --force`, nem reescrever historico "a toa" — os dois
+  lados puxam/empurram sozinhos; force-push corrompe a copia do outro lado.
+- Commits automaticos tem mensagem generica (`auto-sync notebook/jarvis <timestamp>`). Isso e
+  esperado, nao "limpe" o historico por causa disso.
+- Se houver conflito de merge, o script faz `rebase --abort` e PAUSA aquele lado (loga em
+  `sync.log`). Resolver manualmente antes de continuar.
+- `.gitignore` ja bloqueia `.env`, `*APIKEY*`, `node_modules`, `archive/`. NUNCA commitar
+  segredos nem dado identificavel de paciente (LGPD/CFM).
