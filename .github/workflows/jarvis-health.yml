@@ -1,0 +1,114 @@
+name: Jarvis Health Check & Auto-Recovery
+
+on:
+  schedule:
+    # A cada 10 minutos (mínimo do GitHub Actions)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      force_restart:
+        description: 'Forçar restart do container mesmo se estiver rodando'
+        required: false
+        default: 'false'
+
+jobs:
+  check-jarvis:
+    name: Verifica e recupera Jarvis (Hermes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Configurar chave SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 2.25.162.95 >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Verificar e recuperar container Jarvis
+        id: jarvis_check
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=15 \
+            root@2.25.162.95 << 'REMOTE'
+
+          CONTAINER="hermes-agent-hci6-hermes-agent-1"
+          SYNC_LOG="/opt/data/projects/sync.log"
+          REPO_PATH="/opt/data/projects/comando-uti"
+          FORCE="${{ github.event.inputs.force_restart }}"
+
+          echo "=== Status do container ==="
+          STATUS=$(docker inspect --format='{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo "not_found")
+          echo "Container: $CONTAINER | Status: $STATUS"
+
+          if [ "$STATUS" = "not_found" ]; then
+            echo "::ALERTA:: Container não encontrado — verificando docker-compose"
+            cd /opt/data && docker compose up -d hermes-agent 2>&1 || docker-compose up -d hermes-agent 2>&1
+            STATUS="restarted_from_compose"
+          elif [ "$STATUS" != "running" ] || [ "$FORCE" = "true" ]; then
+            echo "::ALERTA:: Container parado ($STATUS) — reiniciando"
+            docker start "$CONTAINER" 2>&1
+            sleep 5
+            STATUS=$(docker inspect --format='{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo "failed")
+            echo "Status pós-restart: $STATUS"
+          else
+            echo "Container rodando normalmente"
+          fi
+
+          echo "=== Últimas linhas do sync.log ==="
+          if [ -f "$SYNC_LOG" ]; then
+            tail -20 "$SYNC_LOG"
+          else
+            echo "sync.log não encontrado em $SYNC_LOG"
+          fi
+
+          echo "=== Git status do repo ==="
+          if [ -d "$REPO_PATH" ]; then
+            cd "$REPO_PATH"
+            git status --short
+            echo "Último commit: $(git log --oneline -1)"
+            # Desbloquear se travado em rebase
+            if git rebase --show-current-patch 2>/dev/null | grep -q "patch"; then
+              echo "::ALERTA:: Rebase em andamento — abortando"
+              git rebase --abort 2>&1
+            fi
+          fi
+
+          echo "=== Logs recentes do container (ultimas 30 linhas) ==="
+          docker logs --tail 30 "$CONTAINER" 2>&1 || true
+
+          echo "CONTAINER_STATUS=$STATUS"
+          REMOTE
+
+      - name: Verificar commits recentes do Jarvis via GitHub
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: commits } = await github.rest.repos.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 20,
+            });
+
+            const now = new Date();
+            const jarvisCommits = commits.filter(c =>
+              c.commit.author.email === 'jarvis@nagaitaltda.com'
+            );
+
+            if (jarvisCommits.length === 0) {
+              core.warning('Nenhum commit do Jarvis encontrado nos últimos 20 commits');
+              return;
+            }
+
+            const lastJarvis = new Date(jarvisCommits[0].commit.author.date);
+            const diffMinutes = Math.floor((now - lastJarvis) / 60000);
+
+            console.log(`Último commit Jarvis: ${lastJarvis.toISOString()} (${diffMinutes} min atrás)`);
+
+            if (diffMinutes > 30) {
+              core.warning(`Jarvis sem sync há ${diffMinutes} minutos!`);
+            } else {
+              console.log('Jarvis sincronizando normalmente');
+            }
