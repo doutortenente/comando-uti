@@ -9,5 +9,41 @@
       "Glob(*)",
       "Grep(*)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "description": "prompt-improver: declarative hook engine, UserPromptSubmit nudge rules",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/skills/prompt-improver/scripts/engine.py UserPromptSubmit || python ${CLAUDE_PROJECT_DIR}/.claude/skills/prompt-improver/scripts/engine.py UserPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "description": "prompt-improver: PreToolUse nudge rules on plan-mode entry and Bash commands",
+        "matcher": "EnterPlanMode|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/skills/prompt-improver/scripts/engine.py PreToolUse || python ${CLAUDE_PROJECT_DIR}/.claude/skills/prompt-improver/scripts/engine.py PreToolUse"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "description": "prompt-improver: SubagentStart nudge rules when an agent spawns",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PROJECT_DIR}/.claude/skills/prompt-improver/scripts/engine.py SubagentStart || python ${CLAUDE_PROJECT_DIR}/.claude/skills/prompt-improver/scripts/engine.py SubagentStart"
+          }
+        ]
+      }
+    ]
   }
 }
