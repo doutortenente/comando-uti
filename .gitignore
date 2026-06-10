@@ -15,7 +15,10 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+# JetBrains: o /.idea da raiz É versionado (arquivos por-usuário em .idea/.gitignore).
+# .idea de subpastas continua ignorado — abra sempre a raiz do repo no IDE.
+**/.idea/
+!/.idea/
 .DS_Store
 *.suo
 *.ntvs*

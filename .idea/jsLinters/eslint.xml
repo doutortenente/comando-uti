@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="EslintConfiguration">
+    <files-pattern value="**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}" />
+    <option name="fix-on-save" value="false" />
+  </component>
+</project>
