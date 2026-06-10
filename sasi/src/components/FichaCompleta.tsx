@@ -14,6 +14,7 @@ import type { Paciente, Evolucao, Pendencia, SasiProblemaAtivo, SasiCondutaSiste
 import { supabase, type PatientSummary } from '../lib/supabaseClient';
 import { useSupabasePatients } from '../hooks/useSupabasePatients';
 import SasiSynthesis from './SasiSynthesis';
+import { buildPatientContext } from '../lib/sasiAI';
 import {
   DVA_DICT, SEDACAO_DICT, calculateDose, ESCALAS_NEURO,
   isHigh, isLow, formatDiureseEfetiva,
@@ -78,6 +79,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [patientSummary, setPatientSummary] = useState<PatientSummary | null>(null);
 
   const { getPatientSummary, savePatientSummary } = useSupabasePatients();
   const { addToast } = useToasts();
@@ -102,6 +104,16 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
       data_adm: paciente.data_adm,
     });
   }, [paciente]);
+
+  useEffect(() => {
+    let mounted = true;
+    getPatientSummary(paciente.id).then((summary) => {
+      if (mounted) setPatientSummary(summary);
+    }).catch(() => {
+      if (mounted) setPatientSummary(null);
+    });
+    return () => { mounted = false; };
+  }, [paciente.id, getPatientSummary]);
 
   useEffect(() => {
     if (!evolucao) {
@@ -1645,6 +1657,24 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           <SasiSynthesis
             problemasAtivos={problemasAtivosDraft}
             condutasSistemas={condutasSistemasDraft}
+            patientContext={buildPatientContext({
+              nome: pacDraft.nome ?? paciente.nome,
+              idade: pacDraft.idade ?? paciente.idade,
+              leito: pacDraft.leito ?? paciente.leito,
+              uti: paciente.uti,
+              hd: pacDraft.hd ?? paciente.hd,
+              peso: pacDraft.peso ?? paciente.peso,
+              motivoAdmissao: patientSummary?.motivo_admissao,
+              antecedentes: patientSummary?.antecedentes,
+              planoTerapeutico: patientSummary?.plano_terapeutico_atual,
+              suporteAtual: patientSummary?.suporte_atual
+                ? [
+                    patientSummary.suporte_atual.ventilacao,
+                    patientSummary.suporte_atual.sedacao,
+                    ...(patientSummary.suporte_atual.antibioticos ?? []),
+                  ].filter(Boolean).join(' · ')
+                : undefined,
+            })}
             onChange={(probs, conds) => {
               setProblemasAtivosDraft(probs);
               setCondutasSistemasDraft(conds);

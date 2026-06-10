@@ -22,7 +22,7 @@
 | Deploy          | Netlify (CI automático a partir de main)         | Base directory aponta para a pasta ativa do SASI |
 | PDF             | jsPDF + jspdf-autotable (lazy)                   | Export de passagem de turno |
 | Ícones          | lucide-react                                     | — |
-| Edge Function   | `ocr-ingest` (já deployada, verify_jwt: true)    | Entrada obrigatória de evoluções via skill ou foto |
+| Edge Function   | `ocr-ingest` (já deployada, verify_jwt: true) · `grok-synthesis` (síntese SASI via xAI Grok) | Entrada obrigatória de evoluções via skill ou foto |
 
 **Princípio arquitetural:**  
 Escrita de evoluções **sempre via edge function ou skill** (`sasi-ingest-export`) com audit log obrigatório (`ingest_audit_log`). Edição manual no frontend é read-only ou limitada.
