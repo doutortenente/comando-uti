@@ -1,0 +1,18 @@
+# Arquivos por-usuário do JetBrains — NÃO versionar
+# (formato segue o .gitignore que o próprio IDE gera por padrão)
+
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+# Estado por-usuário adicional
+/usage.statistics.xml
+/tasks.xml
+/dictionaries/
+/misc.xml
+/sonarlint/
