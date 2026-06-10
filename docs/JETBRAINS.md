@@ -1,5 +1,8 @@
 # Guia JetBrains (WebStorm / IntelliJ) — Comando UTI
 
+> Montando uma máquina do zero? Comece pelo [SETUP.md](SETUP.md)
+> (Node, Git, CLIs e checklist completo) e volte aqui para o IDE.
+
 Este repositório versiona as configurações do JetBrains em `.idea/`
 (módulo, ESLint, code style e run configurations). Arquivos por-usuário
 (`workspace.xml`, `shelf/`, `misc.xml`, etc.) são ignorados via
