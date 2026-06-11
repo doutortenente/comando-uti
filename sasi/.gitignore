@@ -14,12 +14,6 @@ tsconfig.tsbuildinfo
 # Netlify CLI/MCP cache
 .netlify
 
-# Configs de build do SASI: a raiz ignora estes globalmente, mas o build
-# do Netlify (base=sasi) PRECISA deles. Sem o postcss.config.js daqui, o
-# PostCSS sobe a árvore e carrega o da raiz (Tailwind v4) e o build quebra.
-!postcss.config.js
-!tailwind.config.js
-
 # Claude Code worktrees (criados sob demanda, não versionar)
 .claude/worktrees/
 hopeful-meninsky-030dc6/

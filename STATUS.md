@@ -1,13 +1,14 @@
 # STATUS — SASI (Sistema de Auditoria e Síntese Intensiva)
 **Comando UTI Alpha — 33 leitos (UTI 2/3/4)**
 
-**Data desta revisão:** 09/05/2026  
+**Data desta revisão:** 11/06/2026
 **Produção:** https://sasi-uti.netlify.app  
 **Operador:** Dr. Nicolas Tenente (dr.tenente@nagaitaltda.com)  
 **Supabase:** idswehsvvqczzkiatuzu (Postgres 17.6)
 
 > **Este é o documento autoritativo de estado atual.**  
-> Substitui / consolida os MEMORY.md anteriores.  
+> Substitui os antigos `MEMORY.md` (removidos em 11/06/2026).  
+> Briefing operacional para IA: [CLAUDE.md](CLAUDE.md).  
 > Sempre atualize este arquivo em mudanças importantes de arquitetura, deploy, auth ou schema.
 
 ---
@@ -103,11 +104,11 @@ Documento completo no Google Drive: **"Plano de ação login e autenticação SA
 
 ---
 
-## 5. Mapa do Repositório (Maio 2026)
+## 5. Mapa do Repositório (Jun 2026)
 
 **Código ATIVO (fonte da verdade — usar este):**
 ```
-sasi/                               ← NOVO LOCAL CANÔNICO (após faxina 09/05/2026)
+sasi/                               ← frontend canônico
 ├── src/
 │   ├── App.tsx
 │   ├── components/                 (FichaCompleta, Dashboard, LeitoCard, etc.)
@@ -115,38 +116,34 @@ sasi/                               ← NOVO LOCAL CANÔNICO (após faxina 09/05
 │   └── hooks/
 ├── netlify.toml
 ├── package.json
-├── tsconfig.json (strict)
-└── MEMORY.md
+└── tsconfig.json (strict)
+
+supabase/                           ← backend canônico (única árvore)
+├── config.toml
+├── migrations/                     (01–05)
+└── functions/
+    ├── ocr-ingest/
+    ├── grok-synthesis/
+    └── _shared/
+
+sasi-mcp-server/                    ← MCP local (referenciado em .mcp.json)
+docs/                               ← SETUP.md, JETBRAINS.md
+CLAUDE.md                           ← briefing IA
+STATUS.md                           ← este arquivo (estado vivo)
+AGENTS.md                           ← regras + env vars (sem JWTs)
 ```
 
-**Faxina realizada em 09/05/2026 (grande organização):**
-- Código ativo extraído da pasta com nome gigante "OPERAÇÃO SASI..." → agora está limpo em `sasi/` no topo do repositório (maior vitória da faxina).
-- Todas as duplicatas de sessão IA (elegant-*, sweet-*, friendly-*, compassionate-*, hopeful-*) movidas para `archive/session-copies/`.
-- 6 codebases Firebase legadas movidas para `archive/legacy-firebase/`.
-- Protótipos Gemini HTML + extrações movidas para `archive/design-prototypes/`.
-- Arquivos de chaves/senhas (.docx) movidos para `archive/sensitive/`.
-- Lixo antigo (`src/`, `public/`, configs velhas, pastas suspeitas) movido para `archive/`.
-- `.gitignore` reforçado com seção "FAXINA 09/05/2026".
-- Novo local canônico de desenvolvimento: `cd sasi && npm run dev`
-
-**Estrutura final limpa (após faxina completa 09/05/2026):**
-- `sasi/` → código ativo (único lugar que você deve trabalhar)
-- `archive/` → todo o lixo histórico organizado (session-copies, legacy-firebase, design-prototypes, old-clinical-exports, sensitive)
-- `supabase/` + `.github/` → mantidos na raiz
-- Tudo mais (APPS_BETA, Tags, y, src antigo, dist, public, arquivos .docx de chaves, etc.) → deve ser deletado manualmente pelo usuário (ver seção "Ações Manuais Recomendadas" no final deste arquivo)
-
-**⚠️ Arquivos sensíveis ainda na raiz (ação urgente):**
-- `Chaves, Senhas e Acesso a Sistemas (Ficheiro Antigravity).docx`
-- `Links e APIKEYs.docx`
-
-Esses dois arquivos contêm credenciais. Delete-os imediatamente (eles já estão no .gitignore).
-
-**Duplicatas de sessão (worktrees gerados por IA):**
-- `sasi-frontend/elegant-hypatia-bb4773/`, `friendly-jones-cec0ec/`, `sweet-wing-572e9b/`, etc.
-- Recomendação futura: mover para `.claude/worktrees/` ou `archive/`.
+**Faxina 11/06/2026 (conclusão):**
+- Removido scaffold Vite morto na raiz (`package.json`, `index.html`, configs Tailwind v4, `node_modules/` raiz).
+- Removido VSIX Tailwind + pasta extraída.
+- Removidos `MEMORY.md`, `sasi/MEMORY.md`, `sasi/CLAUDE_CODE_GUIDE.md` (consolidados em `STATUS.md` + `CLAUDE.md`).
+- Removidas skills IA duplicadas (`.agents/`, `.claude/skills/` — 78 arquivos).
+- Removido `skills-lock.json` (Firebase/Genkit, irrelevante).
+- Unificado Supabase: `sasi/supabase/` fundido em `supabase/` na raiz (`ocr-ingest` + migration `05_add_patient_summary.sql`).
+- Sanitizado `AGENTS.md`: JWTs substituídos por env vars (`SASI_SERVICE_ROLE_KEY`, `SASI_SUPABASE_ANON_KEY`).
 
 **Governança:**
-- `.github/PULL_REQUEST_TEMPLATE.md` (excelente — exige update de STATUS/MEMORY, typecheck, build, RLS safety).
+- `.github/PULL_REQUEST_TEMPLATE.md` — exige update de `STATUS.md`, typecheck, build, RLS safety.
 
 ---
 
@@ -157,7 +154,7 @@ Esses dois arquivos contêm credenciais. Delete-os imediatamente (eles já estã
 - [ ] Versionar migrations do schema atual (9 tabelas + views) no repositório
 
 ### Prioridade MÉDIA
-- [ ] Consolidar todas as cópias duplicadas (faxina de repositório)
+- [x] Consolidar cópias duplicadas (faxina 11/06/2026)
 - [ ] Modal "Novo Leito" completo no frontend (atualmente depende de skill/edge)
 - [ ] Drawer detalhado com timeline SOFA + eventos (já existe esqueleto)
 - [ ] Error tracking (Sentry ou similar)
@@ -211,57 +208,29 @@ Ver arquivo completo: [AGENTS.md](AGENTS.md)
 | 30-Abr     | Implementação do bundle de design (3 temas + 3 views + calculadora) | 6020c0e |
 | 06-Mai     | **Auth bypass temporário** (mock + dev_bypass RLS) | fc8cd75 — hospital bloqueia Gmail |
 | 06-09-Mai  | Port de features do protótipo Gemini (FichaCompleta, LeitoCard, labs estruturados) | d8a648c, 760b52d, b3c82eb |
+| 11-Jun     | **Faxina final do repo** — scaffold raiz, skills IA, docs duplicados, Supabase unificado | chore/faxina-11jun |
 
 ---
 
-## 10. Recomendações de Faxina (Próximos PRs Seguros)
+## 10. Próximos passos
 
-1. **Curto prazo (esta semana):**  
-   - Criar/atualizar `STATUS.md` (este arquivo) e sincronizar MEMORY.md da pasta ativa.  
-   - Adicionar item no PR template: "Atualizei STATUS.md".
-
-2. **Médio prazo:**  
-   - Mover duplicatas de sessão para `.claude/worktrees/` ou `archive/`.  
-   - Versionar o schema real (gerar migrations a partir do Supabase atual).
-
-3. **Longo prazo (após reativação de auth):**  
-   - Avaliar renomeação para estrutura mais limpa (`sasi/` na raiz).
+1. **Rotacionar JWTs** expostos historicamente em `AGENTS.md` (Supabase Dashboard → Settings → API).
+2. **Versionar schema real** (9 tabelas + views) — migrations locais ainda parcialmente obsoletas.
+3. **Reativar auth** após plano email+senha+MFA.
 
 ---
 
-**Status resumido (09/05/2026):**  
-**Produção estável** com bypass de auth. Código ativo saudável (typecheck + build limpos). Maior risco atual = fragmentação do repositório + drift de schema + dependência do bypass de autenticação.
-
-**Stay hard.**  
-— Faxina completa realizada em 09/05/2026 por Grok (com autorização total do usuário).
+**Status resumido (11/06/2026):**  
+**Produção estável** com bypass de auth. Repo limpo: `sasi/` + `supabase/` + `sasi-mcp-server/`. Maior risco residual = drift de schema + dependência do bypass de autenticação.
 
 ---
 
-## Ações Manuais Recomendadas (Faça agora)
+## Ações Manuais Recomendadas
 
-Depois de dar `git pull`, execute estas ações rápidas:
+### 1. Rotacionar keys (se ainda não fez)
+JWTs antigos vazaram no histórico do git via `AGENTS.md`. Rotacione no Supabase e atualize `.env` local.
 
-### 1. Delete os arquivos sensíveis (URGENTE - contêm chaves)
-Delete diretamente no Windows Explorer:
-- `Chaves, Senhas e Acesso a Sistemas (Ficheiro Antigravity).docx`
-- `Links e APIKEYs.docx`
-
-Eles já estão no `.gitignore`, mas é mais seguro removê-los fisicamente.
-
-### 2. Delete o que sobrou de lixo na raiz (opcional mas recomendado)
-Você pode deletar com segurança:
-- `APPS_BETA_VERSOES_ANTERIORES/`
-- `bradlc.vscode-tailwindcss-0.14.29.vsix`
-- `extract.cjs`
-- `gemini_code_extracted.tsx`
-- `index.html`
-- `install.cmd`
-- `postcss.config.js`
-- `tailwind.config.js`
-- `vite.config.js`
-- Qualquer outro arquivo pequeno estranho que não seja `.md`, `.json` de config ou `eslint.config.js`
-
-### 3. Configuração do Netlify (importante para deploy continuar funcionando)
+### 2. Configuração do Netlify (importante para deploy continuar funcionando)
 Acesse https://app.netlify.com/projects/sasi-uti/configuration/general
 
 - **Base directory**: mude de (vazio ou caminho antigo longo) para **`sasi`**
