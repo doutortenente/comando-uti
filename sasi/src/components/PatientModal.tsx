@@ -39,6 +39,8 @@ type Tab = 'detalhes' | 'editar' | 'evolucao';
 interface Props {
   pacienteId: string;
   onClose: () => void;
+  /** Navega pra página-prontuário (view Pacientes) e fecha o modal. */
+  onOpenProntuario?: (id: string) => void;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -251,7 +253,7 @@ function EvolucaoTab({
 
 // ── main component ─────────────────────────────────────────────────────────
 
-export default function PatientModal({ pacienteId, onClose }: Props) {
+export default function PatientModal({ pacienteId, onClose, onOpenProntuario }: Props) {
   const [tab, setTab] = useState<Tab>('detalhes');
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [evolucao, setEvolucao] = useState<Evolucao | null>(null);
@@ -470,6 +472,16 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                         <BarChart3 className="w-3 h-3" />
                         Timeline
                       </button>
+                      {onOpenProntuario && (
+                        <button
+                          onClick={() => onOpenProntuario(pacienteId)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-muted hover:text-app-text-2 text-[11px] font-medium transition"
+                          title="Abrir prontuário do paciente"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Prontuário
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
