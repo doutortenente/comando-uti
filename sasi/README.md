@@ -158,9 +158,15 @@ curl -X POST "https://idswehsvvqczzkiatuzu.supabase.co/functions/v1/ocr-ingest" 
 ```bash
 # Deploy edge function (CLI)
 supabase functions deploy ocr-ingest --project-ref idswehsvvqczzkiatuzu
+supabase functions deploy grok-synthesis --project-ref idswehsvvqczzkiatuzu
+
+# Secrets da edge function Grok (Dashboard → Edge Functions → grok-synthesis → Secrets)
+# supabase secrets set XAI_API_KEY=sk-... --project-ref idswehsvvqczzkiatuzu
+# supabase secrets set XAI_MODEL=grok-3-mini --project-ref idswehsvvqczzkiatuzu
 
 # Logs da edge function
 supabase functions logs ocr-ingest --project-ref idswehsvvqczzkiatuzu --tail
+supabase functions logs grok-synthesis --project-ref idswehsvvqczzkiatuzu --tail
 
 # Build prod
 npm run build

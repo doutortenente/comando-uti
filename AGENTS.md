@@ -13,8 +13,12 @@ Consulte [STATUS.md](STATUS.md) para estado completo e instruções.
 ### Supabase (Principal)
 type: supabase
 project_url: https://idswehsvvqczzkiatuzu.supabase.co
-service_role_key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc3dlaHN2dnFjenpraWF0dXp1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjMyMTQxMSwiZXhwIjoyMDkxODk3NDExfQ.N65jpJPdHpO7rWHTPpgRKALh4TaElKZV8wdivwpczGc
-anon_key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkc3dlaHN2dnFjenpraWF0dXp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMjE0MTEsImV4cCI6MjA5MTg5NzQxMX0.EqqlmqGBg1PaEdONLYnxH3lVVMWi2x-QXSY5rtSnYdw
+service_role_key: ${SASI_SERVICE_ROLE_KEY}
+anon_key: ${SASI_SUPABASE_ANON_KEY}
+
+> **Segurança:** nunca commitar JWTs. Defina as variáveis no ambiente local
+> (`.env`, shell profile, ou secrets do IDE). Se alguma key já vazou no histórico
+> do git, rotacione em Supabase Dashboard → Settings → API.
 
 ## SASI Rules (Sempre seguir)
 - Use o template SASI v2.0 (Ramo C) com ortogonalidade de eixos

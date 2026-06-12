@@ -139,3 +139,89 @@ export function exportPassagemTurno(
   const ts = now.toISOString().replace(/[:.]/g, '').slice(0, 13);
   doc.save(`SASI_passagem_${ts}.pdf`);
 }
+
+/** Passagem 3-linhas — A4 paisagem com autoTable (paginação automática) */
+export function exportPassagemTurno3Linhas(
+  patients: DashboardRow[],
+  blocks: Array<{ linha1: string; linha2: string; linha3: string }>,
+  userEmail?: string,
+) {
+  const now = new Date();
+  const plantao = getPlantao();
+  const dateStr = now.toLocaleDateString('pt-BR');
+  const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SASI — Passagem de Turno', 10, 12);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${dateStr} ${timeStr} · Plantão ${plantao}${userEmail ? ` · ${userEmail}` : ''}`, 10, 17);
+
+  const head = [['UTI', 'Lt', 'Nome', 'SOFA', 'Δ', 'Grav', 'D', 'Muda-conduta (L2)', 'Pendências/Riscos (L3)']];
+
+  const body = patients.map((p, i) => {
+    const block = blocks[i];
+    const delta = p.delta_sofa_24h ?? 0;
+    const deltaStr = delta > 0 ? `+${delta}` : delta < 0 ? String(delta) : '—';
+    return [
+      p.uti,
+      p.leito,
+      truncate(p.nome, 28),
+      p.sofa_total ?? '—',
+      deltaStr,
+      p.gravidade,
+      `D${p.dias_internacao}`,
+      truncate(block?.linha2 ?? '', 120),
+      truncate(block?.linha3 ?? '', 120),
+    ];
+  });
+
+  autoTable(doc, {
+    startY: 22,
+    head,
+    body,
+    theme: 'grid',
+    styles: {
+      fontSize: 6.5,
+      cellPadding: 1.8,
+      lineWidth: 0.1,
+      overflow: 'linebreak',
+      cellWidth: 'wrap',
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: 255,
+      fontStyle: 'bold',
+      fontSize: 6.5,
+    },
+    columnStyles: {
+      0: { cellWidth: 11 },
+      1: { cellWidth: 9, halign: 'center' },
+      2: { cellWidth: 32 },
+      3: { cellWidth: 9, halign: 'center' },
+      4: { cellWidth: 8, halign: 'center' },
+      5: { cellWidth: 14 },
+      6: { cellWidth: 9, halign: 'center' },
+      7: { cellWidth: 85 },
+      8: { cellWidth: 'auto' },
+    },
+    margin: { left: 10, right: 10, bottom: 12 },
+    didDrawPage(data) {
+      const pageH = doc.internal.pageSize.getHeight();
+      doc.setFontSize(6);
+      doc.setTextColor(150);
+      doc.text(
+        `SASI v2.0 · ${patients.length} pacientes · LGPD art. 46 · Pág ${data.pageNumber}`,
+        10,
+        pageH - 5,
+      );
+    },
+  });
+
+  const ts = now.toISOString().replace(/[:.]/g, '').slice(0, 13);
+  doc.save(`SASI_passagem_${ts}.pdf`);
+}

@@ -1,9 +1,12 @@
 // ============================================================================
 // sasiAI.ts — Integração com IA para Síntese SASI v2.0
+// Grok via Edge Function (XAI_API_KEY server-side) + simulação local fallback
 // Otimizado para o fluxo real do usuário:
 // - Cola evolução anterior + OCR do folhão + prescrição
 // - Gera Problemas Ativos com vetor + Conduta por sistemas com metas
 // ============================================================================
+
+import { supabase } from './supabaseClient';
 
 export interface RawClinicalInput {
   previousEvolution?: string;
@@ -38,6 +41,28 @@ export interface SASISynthesisOutput {
   condutasSistemas: SASIConduta[];
   riscos: string[];
   observacoes?: string;
+}
+
+export interface GrokSynthesisResponse {
+  ok: boolean;
+  source?: string;
+  model?: string;
+  result?: SASISynthesisOutput;
+  error?: string;
+  detail?: string;
+}
+
+export interface PatientContextInput {
+  nome?: string;
+  idade?: number;
+  leito?: string;
+  uti?: string;
+  hd?: string;
+  peso?: number;
+  motivoAdmissao?: string;
+  antecedentes?: string;
+  planoTerapeutico?: string;
+  suporteAtual?: string;
 }
 
 // ====================== PROMPTS DE ALTA QUALIDADE ======================
@@ -171,11 +196,65 @@ export function simulateSASISynthesis(request: SASISynthesisRequest): SASISynthe
   };
 }
 
-// Função principal que o app vai usar
-export async function generateStructuredSynthesis(request: SASISynthesisRequest): Promise<SASISynthesisOutput> {
-  // Por enquanto usa a simulação local (muito boa para o fluxo do usuário)
-  // Depois pode ser trocado por chamada real para Grok/Claude/Gemini
-  return simulateSASISynthesis(request);
+export function buildPatientContext(input: PatientContextInput): string {
+  const lines = [
+    input.nome ? `Paciente: ${input.nome}${input.idade != null ? `, ${input.idade}a` : ''}` : '',
+    input.leito && input.uti ? `Leito: ${input.leito} · ${input.uti}` : '',
+    input.hd ? `HD: ${input.hd}` : '',
+    input.peso != null ? `Peso: ${input.peso} kg` : '',
+    input.motivoAdmissao ? `Motivo admissão: ${input.motivoAdmissao}` : '',
+    input.antecedentes ? `Antecedentes: ${input.antecedentes}` : '',
+    input.planoTerapeutico ? `Plano terapêutico atual: ${input.planoTerapeutico}` : '',
+    input.suporteAtual ? `Suporte atual: ${input.suporteAtual}` : '',
+  ].filter(Boolean);
+
+  return lines.length > 0 ? lines.join('\n') : 'Paciente em evolução pontual — contexto clínico limitado.';
+}
+
+export async function generateStructuredSynthesisViaGrok(
+  request: SASISynthesisRequest,
+): Promise<SASISynthesisOutput> {
+  const { data, error } = await supabase.functions.invoke<GrokSynthesisResponse>('grok-synthesis', {
+    body: {
+      $schema: 'sasi-grok-synthesis/v1',
+      ...request,
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || 'edge_function_invoke_failed');
+  }
+
+  if (!data?.ok || !data.result) {
+    throw new Error(data?.detail || data?.error || 'grok_synthesis_failed');
+  }
+
+  return {
+    problemasAtivos: data.result.problemasAtivos.map((p) => ({
+      texto: p.texto,
+      vetor: (['↑', '↓', '='].includes(p.vetor) ? p.vetor : '=') as SASIProblema['vetor'],
+      sistema: p.sistema,
+    })),
+    condutasSistemas: data.result.condutasSistemas,
+    riscos: data.result.riscos ?? [],
+    observacoes: data.result.observacoes,
+  };
+}
+
+export async function generateStructuredSynthesis(
+  request: SASISynthesisRequest,
+  options?: { preferGrok?: boolean },
+): Promise<{ output: SASISynthesisOutput; source: 'grok' | 'local' }> {
+  if (options?.preferGrok !== false) {
+    try {
+      const output = await generateStructuredSynthesisViaGrok(request);
+      return { output, source: 'grok' };
+    } catch (err) {
+      console.warn('[SASI] Grok indisponível, usando simulação local:', err);
+    }
+  }
+
+  return { output: simulateSASISynthesis(request), source: 'local' };
 }
 
 // Gera o prompt perfeito para colar no Grok, Claude ou Gemini

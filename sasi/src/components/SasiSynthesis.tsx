@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { SasiProblemaAtivo, SasiCondutaSistema, Vetor, SystemKey } from '../lib/supabaseClient';
 import { Plus, Trash2, Sparkles } from 'lucide-react';
-import { generateStructuredSynthesis, getReadyToPastePrompt, SASISynthesisRequest } from '../lib/sasiAI';
+import { generateStructuredSynthesis, getReadyToPastePrompt, SASISynthesisRequest, type SASISynthesisOutput } from '../lib/sasiAI';
 
 const SISTEMAS: SystemKey[] = ['neuro', 'resp', 'hemo', 'tgi', 'renal', 'hemato', 'infecto'];
 const VETORES: Vetor[] = ['↑', '↓', '='];
@@ -15,13 +15,16 @@ interface Props {
   problemasAtivos: SasiProblemaAtivo[];
   condutasSistemas: SasiCondutaSistema[];
   onChange: (problemas: SasiProblemaAtivo[], condutas: SasiCondutaSistema[]) => void;
+  patientContext?: string;
 }
 
-export default function SasiSynthesis({ problemasAtivos, condutasSistemas, onChange }: Props) {
+export default function SasiSynthesis({ problemasAtivos, condutasSistemas, onChange, patientContext }: Props) {
   const [problemas, setProblemas] = useState<SasiProblemaAtivo[]>(problemasAtivos);
   const [condutas, setCondutas] = useState<SasiCondutaSistema[]>(condutasSistemas);
   const [rawText, setRawText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [lastSource, setLastSource] = useState<'grok' | 'local' | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const updateProblemas = (newProblemas: SasiProblemaAtivo[]) => {
     setProblemas(newProblemas);
@@ -33,64 +36,87 @@ export default function SasiSynthesis({ problemasAtivos, condutasSistemas, onCha
     onChange(problemas, newCondutas);
   };
 
-  // ====================== INTEGRAÇÃO DE IA ======================
-  const handleGenerateWithAI = async () => {
+  const buildRequest = (): SASISynthesisRequest => ({
+    patientContext: patientContext?.trim() || 'Paciente em evolução pontual — contexto clínico limitado.',
+    rawData: {
+      previousEvolution: rawText,
+      ocrNursingNotes: rawText,
+    },
+  });
+
+  const applySynthesisResult = (result: SASISynthesisOutput) => {
+    const newProblemas: SasiProblemaAtivo[] = result.problemasAtivos.map(p => ({
+      texto: p.texto,
+      vetor: p.vetor as Vetor,
+      sistema: p.sistema as SystemKey | undefined,
+    }));
+
+    const newCondutas: SasiCondutaSistema[] = result.condutasSistemas.map(c => ({
+      sistema: c.sistema as SystemKey | 'geral',
+      texto: c.texto,
+      meta: c.meta,
+      prazo: c.prazo,
+    }));
+
+    updateProblemas(newProblemas);
+    updateCondutas(newCondutas);
+  };
+
+  const handleGenerateWithGrok = async () => {
     if (!rawText.trim()) {
       alert('Cole o texto bruto (evolução anterior + OCR do folhão/prescrição) no campo acima.');
       return;
     }
 
     setIsGenerating(true);
+    setLastError(null);
 
     try {
-      const request: SASISynthesisRequest = {
-        patientContext: 'Paciente em evolução pontual - contexto a ser preenchido pelo Patient Summary',
-        rawData: {
-          previousEvolution: rawText,
-          ocrNursingNotes: rawText,
-        },
-      };
-
-      // Usa simulação local inteligente (já bastante boa)
-      const result = await generateStructuredSynthesis(request);
-
-      // Converte para o formato do componente
-      const newProblemas: SasiProblemaAtivo[] = result.problemasAtivos.map(p => ({
-        texto: p.texto,
-        vetor: p.vetor as Vetor,
-        sistema: p.sistema as SystemKey | undefined,
-      }));
-
-      const newCondutas: SasiCondutaSistema[] = result.condutasSistemas.map(c => ({
-        sistema: c.sistema as SystemKey | 'geral',
-        texto: c.texto,
-        meta: c.meta,
-        prazo: c.prazo,
-      }));
-
-      updateProblemas(newProblemas);
-      updateCondutas(newCondutas);
-
-      alert('Síntese gerada com sucesso! Revise e ajuste conforme necessário.');
+      const { output, source } = await generateStructuredSynthesis(buildRequest(), { preferGrok: true });
+      applySynthesisResult(output);
+      setLastSource(source);
+      if (source === 'grok') {
+        alert('Síntese gerada com Grok! Revise e ajuste conforme necessário.');
+      } else {
+        alert('Grok indisponível — síntese gerada com simulação local. Revise os dados.');
+      }
     } catch (error) {
       console.error(error);
-      alert('Erro ao gerar síntese. Tente novamente ou use o prompt manual.');
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      setLastError(message);
+      alert(`Erro ao gerar síntese: ${message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateLocal = async () => {
+    if (!rawText.trim()) {
+      alert('Cole o texto bruto (evolução anterior + OCR do folhão/prescrição) no campo acima.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setLastError(null);
+
+    try {
+      const { output, source } = await generateStructuredSynthesis(buildRequest(), { preferGrok: false });
+      applySynthesisResult(output);
+      setLastSource(source);
+      alert('Síntese gerada com simulação local. Revise e ajuste conforme necessário.');
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao gerar síntese local.');
     } finally {
       setIsGenerating(false);
     }
   };
 
   const copyPromptForExternalAI = () => {
-    const request: SASISynthesisRequest = {
-      patientContext: 'Paciente em evolução pontual',
-      rawData: { previousEvolution: rawText },
-    };
-    const prompt = getReadyToPastePrompt(request);
+    const prompt = getReadyToPastePrompt(buildRequest());
     navigator.clipboard.writeText(prompt);
     alert('Prompt SASI v2.0 copiado! Cole no Grok (recomendado), Claude ou Gemini.');
   };
-
-  // Nota: integração direta com API Grok/Claude (sem copiar) virá via Edge Function (LGPD). Motor local + prompt já excelente.
 
   // Sugestões comuns de metas (baseado em exemplos reais do usuário)
   const metaSuggestions = [
@@ -149,7 +175,7 @@ export default function SasiSynthesis({ problemasAtivos, condutasSistemas, onCha
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-4 h-4 text-purple-400" />
           <span className="font-bold text-sm">Gerar Síntese com IA</span>
-          <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded">Grok • Claude • Gemini</span>
+          <span className="text-[10px] bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded">Grok API · Local · Manual</span>
         </div>
 
         <textarea
@@ -161,11 +187,19 @@ export default function SasiSynthesis({ problemasAtivos, condutasSistemas, onCha
 
         <div className="flex flex-wrap gap-2 mt-2">
           <button
-            onClick={handleGenerateWithAI}
+            onClick={handleGenerateWithGrok}
             disabled={isGenerating || !rawText.trim()}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition"
           >
-            {isGenerating ? 'Gerando...' : 'Gerar com IA (Simulação Local)'}
+            {isGenerating ? 'Gerando...' : 'Gerar com Grok'}
+          </button>
+
+          <button
+            onClick={handleGenerateLocal}
+            disabled={isGenerating || !rawText.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-app-card border border-app-border hover:bg-app-tertiary disabled:opacity-50 text-sm font-medium rounded-xl transition"
+          >
+            Simulação Local
           </button>
 
           <button
@@ -173,17 +207,25 @@ export default function SasiSynthesis({ problemasAtivos, condutasSistemas, onCha
             disabled={!rawText.trim()}
             className="flex items-center gap-2 px-4 py-2 border border-app-border hover:bg-app-card text-sm font-medium rounded-xl transition"
           >
-            Copiar Prompt para Grok / Claude / Gemini
+            Copiar Prompt Manual
           </button>
         </div>
 
         <p className="text-[10px] text-app-text-muted mt-2">
-          Cole evolução anterior + OCR do folhão + prescrição. A simulação local já está bem treinada no seu estilo.
+          Cole evolução anterior + OCR do folhão + prescrição. Grok roda via Edge Function (chave xAI no servidor).
         </p>
 
-        <p className="text-[10px] text-app-text-muted mt-1.5">
-          A simulação local já é bem inteligente. Para melhor qualidade, copie o prompt e cole no modelo que preferir.
-        </p>
+        {lastSource && (
+          <p className="text-[10px] text-app-text-muted mt-1">
+            Última geração: {lastSource === 'grok' ? 'Grok API' : 'simulação local'}.
+          </p>
+        )}
+
+        {lastError && (
+          <p className="text-[10px] text-red-400 mt-1">
+            Erro Grok: {lastError}
+          </p>
+        )}
       </div>
       {/* === PROBLEMAS ATIVOS COM VETOR === */}
       <div>

@@ -14,13 +14,13 @@ Este checklist evita que mudanças entrem sem que outras sessões fiquem sabendo
 - [ ] ✨ Feature (adiciona funcionalidade)
 - [ ] ♻️ Refator (sem mudança de comportamento)
 - [ ] 🛠 Build / CI / config (deploy, env vars, dependências)
-- [ ] 📚 Docs / MEMORY.md
+- [ ] 📚 Docs / STATUS.md
 - [ ] 🗑 Limpeza / dead code
 
 ## ✅ Checklist obrigatório
 
 ### Multi-Claude sync
-- [ ] Atualizei `MEMORY.md` se a mudança afeta deploy, schema, auth, ou arquitetura
+- [ ] Atualizei `STATUS.md` se a mudança afeta deploy, schema, auth, ou arquitetura
 - [ ] Adicionei linha em "Histórico de decisões" se for decisão importante
 - [ ] Não introduzi caminhos novos com caracteres não-ASCII
 
@@ -56,7 +56,7 @@ Este checklist evita que mudanças entrem sem que outras sessões fiquem sabendo
 
 ## 🔗 Links relevantes
 
-<!-- MEMORY.md sections afetadas, issues, decisões prévias. -->
+<!-- STATUS.md sections afetadas, issues, decisões prévias. -->
 
 ---
 
