@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import type { DashboardRow } from '../lib/supabaseClient';
 import { sofaColorClass } from '../lib/drugs';
+import { getSeverity } from '../lib/severity';
+import { extractDiagnosticoPrincipal, extractDispositivos } from '../lib/clinicalExtract';
 
 interface Props {
   row: DashboardRow;
@@ -78,6 +80,9 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
   const { vm: hasVM, vni: hasVNI } = detectSupport(respData);
   const hasATB = detectATB(infectoData);
 
+  const sev = getSeverity(row.gravidade);
+  const diagnostico = extractDiagnosticoPrincipal(row);
+  const dispositivos = extractDispositivos(row);
   const problemas = getProblemas(row);
   const maxProblemas = compact ? 2 : 3;
 
@@ -89,7 +94,7 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
   return (
     <button
       onClick={() => onSelect?.(row.paciente_id)}
-      className={`group relative text-left w-full rounded-2xl border transition shadow-md sasi-fade-in card-grav-${row.gravidade} ${
+      className={`group relative text-left w-full rounded-2xl border transition shadow-md sasi-fade-in ${sev.cardClass} ${
         compact ? 'p-3' : 'p-4'
       } ${isSeptic || row.gravidade === 'critico' ? 'sasi-critical-pulse' : ''} hover:shadow-xl hover:-translate-y-[1px] cursor-pointer active:scale-[0.985]`}
     >
@@ -124,13 +129,23 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
         </div>
       </div>
 
-      {/* NOME */}
+      {/* NOME + DIAGNÓSTICO */}
       <h3
-        className={`font-bold text-app-text leading-tight truncate ${compact ? 'text-sm mb-1.5' : 'text-base mb-1.5'}`}
+        className={`font-bold text-app-text leading-tight truncate ${compact ? 'text-sm mb-0.5' : 'text-base mb-0.5'}`}
         title={row.nome}
       >
         {row.nome || 'Não identificado'}
       </h3>
+      {!compact && diagnostico && diagnostico !== '—' && (
+        <p className="text-xs text-app-text-2 line-clamp-2 mb-1.5" title={diagnostico}>
+          {diagnostico}
+        </p>
+      )}
+      {!compact && dispositivos.length > 0 && (
+        <p className="text-[10px] text-app-text-muted line-clamp-1 mb-1.5" title={dispositivos.join(' · ')}>
+          {dispositivos.slice(0, 3).join(' · ')}
+        </p>
+      )}
 
       {/* HERO: PROBLEMA PRINCIPAL COM VETOR GIGANTE (decisão pontual) */}
       {mainProblema ? (
@@ -179,8 +194,8 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
 
       {/* BADGE STRIP */}
       <div className={`${compact ? 'mt-0.5' : 'pt-1.5 border-t border-app-border/30'} flex flex-wrap items-center gap-1.5`}>
-        <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded gravidade-${row.gravidade}`}>
-          {row.gravidade}
+        <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded ${sev.badgeClass}`}>
+          {sev.label}
         </span>
 
         {dvaCount > 0 && (

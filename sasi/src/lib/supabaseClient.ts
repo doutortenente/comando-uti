@@ -171,6 +171,45 @@ export interface DashboardRow {
 
 // ==================== PATIENT SUMMARY (início do trabalho) ====================
 
+export interface PrescricaoItem {
+  sistema: string;
+  sistemaLabel: string;
+  medicamento: string;
+  dose: string;
+  via: string;
+  frequencia: string;
+  horarios: string;
+  obs: string;
+}
+
+export interface ResumoSistemaRow {
+  id: string;
+  label: string;
+  emoji: string;
+  texto: string;
+}
+
+export interface TabelaoLabCell {
+  val1?: string;
+  val2?: string;
+  tendencia?: string;
+  alerta?: string;
+}
+
+export interface Interconsulta {
+  especialidade: string;
+  data?: string;
+  status?: 'pendente' | 'agendada' | 'realizada' | 'cancelada';
+  notas?: string;
+}
+
+export interface ProgramacaoItem {
+  descricao: string;
+  data?: string;
+  tipo?: 'exame' | 'procedimento' | 'alta' | 'transferencia' | 'outro';
+  status?: 'pendente' | 'agendado' | 'concluido';
+}
+
 export interface PatientSummary {
   id: string;
   paciente_id: string;
@@ -193,6 +232,14 @@ export interface PatientSummary {
     sedacao?: string;
     antibioticos?: string[];
   };
+  interconsultas?: Interconsulta[];
+  programacao?: ProgramacaoItem[];
+  /** Base tabular por sistema (espelho Excel FASE 3) */
+  resumo_sistemas?: ResumoSistemaRow[];
+  /** Iatrogenias, sutilezas, DVA/fluidos (campos livres do Excel) */
+  iatrogenias?: string;
+  sutilezas?: string;
+  dva_fluidos?: string;
   exames_relevantes?: string;
   plano_terapeutico_atual?: string;
   ultima_atualizacao: string;

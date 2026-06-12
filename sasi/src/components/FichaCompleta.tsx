@@ -341,7 +341,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent hover:bg-app-accent-hover disabled:opacity-50 text-white text-sm font-bold transition"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? 'Salvando...' : 'Salvar Ficha'}
+          {saving ? 'Salvando...' : 'Salvar Ficha de Evolução'}
         </button>
         {saveMsg && (
           <span className={`text-xs font-semibold ${saveMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -473,7 +473,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
               onChange={e => setPacDraft(d => ({ ...d, gravidade: e.target.value as Paciente['gravidade'] }))}
             >
               <option value="estavel">1 · Estável</option>
-              <option value="moderado">2 · Pot. Instável</option>
+              <option value="moderado">2 · Watcher</option>
               <option value="grave">3 · Instável</option>
               <option value="critico">4 · Crítico</option>
               <option value="obito">Óbito</option>
@@ -1587,7 +1587,7 @@ export default function FichaCompleta({ paciente, evolucao, pendencias, onSaved 
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-app-accent hover:bg-app-accent-hover disabled:opacity-50 text-white text-sm font-bold transition"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? 'Salvando...' : 'Salvar Ficha'}
+          {saving ? 'Salvando...' : 'Salvar Ficha de Evolução'}
         </button>
         {saveMsg && (
           <span className={`text-xs font-semibold ${saveMsg.ok ? 'text-emerald-400' : 'text-red-400'}`}>

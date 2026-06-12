@@ -1,33 +1,32 @@
 // ============================================================================
-// SASI · Dashboard — sala de guerra das 3 UTIs (33 leitos)
-// 3 view modes: plantao (Cards) / round (Split) / editor (Tabela)
-// 3 themes (via UIProvider): dark / clinical / light
-// Smart filters: Críticos | ↑SOFA | DVA | VM | Sem evolução | Busca
+// SASI · Dashboard — 5 Janelas (redesign Jun 2026)
+// 1 Leitos | 2 Eixo Tempo | 3 Eixo Estado | 4 Problema→Ação | 5 Passagem
 // ============================================================================
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { useSupabasePatients } from '../hooks/useSupabasePatients';
+import { usePatientDetail } from '../hooks/usePatientDetail';
 import { useClinicalAlerts } from '../hooks/useClinicalAlerts';
-import { useUI } from '../lib/theme';
+import { useUI, type Janela } from '../lib/theme';
 import { useKeyboardShortcuts } from '../lib/useKeyboardShortcuts';
 import type { DashboardRow } from '../lib/supabaseClient';
-import LeitoCard from './LeitoCard';
-import PatientModal from './PatientModal';
 import ThemeToggle from './ThemeToggle';
-import ViewSwitcher from './ViewSwitcher';
+import JanelaNav from './JanelaNav';
+import PatientStrip from './PatientStrip';
 import CriticalAlerts from './CriticalAlerts';
-import SplitView from './SplitView';
-import TableView from './TableView';
-import {
-  Bell, BedDouble, ClipboardCopy, FileDown, Filter,
-  Heart, Plus, RefreshCw, Search, ShieldCheck, Users, Wind, X,
-} from 'lucide-react';
-import { LeitoCardSkeleton, SplitSkeleton, EmptyState } from './Skeletons';
+import PatientModal from './PatientModal';
 import NovoLeitoModal from './NovoLeitoModal';
-import { gerarTextoPlantao } from '../lib/drugs';
+import JanelaLeitos from './janelas/JanelaLeitos';
+import EixoTempo from './janelas/EixoTempo';
+import EixoEstado from './janelas/EixoEstado';
+import FichaEvolucao from './janelas/FichaEvolucao';
+import PassagemTurno from './janelas/PassagemTurno';
+import {
+  Bell, Filter, Heart, Plus, RefreshCw, Search, ShieldCheck, Users, Wind, X,
+} from 'lucide-react';
 import { useToasts } from '../lib/useToasts';
 
-const lazyExportPDF = () => import('../lib/exportPDF');
+const SELECTED_KEY = 'sasi.selectedPatientId';
 
 interface Props {
   session: Session;
@@ -35,7 +34,7 @@ interface Props {
 
 const UTIS = ['UTI2', 'UTI3', 'UTI4'] as const;
 type UtiFilter = (typeof UTIS)[number] | 'TODAS';
-type SmartFilter = 'todos' | 'critico' | 'sofa_up' | 'dva' | 'vm' | 'sem_evolucao';
+type SmartFilter = 'todos' | 'critico' | 'watcher' | 'instavel' | 'sofa_up' | 'dva' | 'vm' | 'sem_evolucao';
 
 function rowHasVM(row: DashboardRow): boolean {
   const snapshot = row.sofa_snapshot as Record<string, unknown> | undefined;
@@ -60,113 +59,135 @@ const SMART_FILTERS: Array<{
   activeClass: string;
   icon?: React.ReactNode;
 }> = [
-  {
-    id: 'todos',
-    label: 'Todos',
-    count: rows => rows.length,
-    activeClass: 'bg-app-accent text-white',
-  },
-  {
-    id: 'critico',
-    label: 'Críticos',
-    count: rows => rows.filter(r => r.gravidade === 'critico').length,
-    activeClass: 'bg-red-700 text-red-100',
-  },
-  {
-    id: 'sofa_up',
-    label: 'Piora SOFA 24h',
-    count: rows => rows.filter(r => (r.delta_sofa_24h ?? 0) > 0).length,
-    activeClass: 'bg-red-900 text-red-200',
-  },
-  {
-    id: 'dva',
-    label: 'Em DVA',
-    count: rows => rows.filter(rowHasDVA).length,
-    activeClass: 'bg-rose-900 text-rose-200',
-    icon: <Heart className="w-3 h-3" />,
-  },
-  {
-    id: 'vm',
-    label: 'VM',
-    count: rows => rows.filter(rowHasVM).length,
-    activeClass: 'bg-sky-900 text-sky-200',
-    icon: <Wind className="w-3 h-3" />,
-  },
-  {
-    id: 'sem_evolucao',
-    label: 'Sem evolução',
-    count: rows => rows.filter(rowSemEvolucao).length,
-    activeClass: 'bg-amber-900 text-amber-200',
-  },
+  { id: 'todos', label: 'Todos', count: rows => rows.length, activeClass: 'bg-app-accent text-white' },
+  { id: 'critico', label: 'Críticos', count: rows => rows.filter(r => r.gravidade === 'critico').length, activeClass: 'bg-red-700 text-red-100' },
+  { id: 'watcher', label: 'Watcher', count: rows => rows.filter(r => r.gravidade === 'moderado').length, activeClass: 'bg-amber-700 text-amber-100' },
+  { id: 'instavel', label: 'Instável', count: rows => rows.filter(r => r.gravidade === 'grave').length, activeClass: 'bg-orange-800 text-orange-100' },
+  { id: 'sofa_up', label: '↑SOFA', count: rows => rows.filter(r => (r.delta_sofa_24h ?? 0) > 0).length, activeClass: 'bg-red-900 text-red-200' },
+  { id: 'dva', label: 'DVA', count: rows => rows.filter(rowHasDVA).length, activeClass: 'bg-rose-900 text-rose-200', icon: <Heart className="w-3 h-3" /> },
+  { id: 'vm', label: 'VM', count: rows => rows.filter(rowHasVM).length, activeClass: 'bg-sky-900 text-sky-200', icon: <Wind className="w-3 h-3" /> },
+  { id: 'sem_evolucao', label: 'Sem evol.', count: rows => rows.filter(rowSemEvolucao).length, activeClass: 'bg-amber-900 text-amber-200' },
 ];
+
+function readSelectedId(): string | null {
+  try {
+    return window.localStorage.getItem(SELECTED_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export default function Dashboard({ session }: Props) {
   const { dashboard, loading, error } = useSupabasePatients();
   const { totalCriticos, totalWarnings } = useClinicalAlerts();
   const { addToast } = useToasts();
-  const { viewMode, setViewMode, cycleTheme } = useUI();
+  const { janela, setJanela, cycleTheme } = useUI();
+
   const [utiFilter, setUtiFilter] = useState<UtiFilter>('TODAS');
   const [smartFilter, setSmartFilter] = useState<SmartFilter>('todos');
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedIdState] = useState<string | null>(readSelectedId);
+  const [modalId, setModalId] = useState<string | null>(null);
+  const [modalTab, setModalTab] = useState<'detalhes' | 'evolucao'>('detalhes');
   const [showNovoLeito, setShowNovoLeito] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
-  const noModal = !selectedId && !showNovoLeito;
-  const shortcuts = useCallback(() => ({
-    'j': () => {},
-    'k': () => {},
-    't': cycleTheme,
-    'n': () => setShowNovoLeito(true),
-    '?': () => setShowShortcuts(v => !v),
-    'Escape': () => { setShowShortcuts(false); setSelectedId(null); setSearch(''); },
-    'g p': () => setViewMode('plantao'),
-    'g r': () => setViewMode('round'),
-    'g e': () => setViewMode('editor'),
-  }), [cycleTheme, setViewMode]);
-  useKeyboardShortcuts(shortcuts(), noModal);
+  const setSelectedId = useCallback((id: string | null) => {
+    setSelectedIdState(id);
+    try {
+      if (id) window.localStorage.setItem(SELECTED_KEY, id);
+      else window.localStorage.removeItem(SELECTED_KEY);
+    } catch { /* no-op */ }
+  }, []);
 
-  // Base: filtrado por UTI — base para contar os smart filter pills
+  const detail = usePatientDetail(selectedId);
+
   const base = useMemo(
     () => utiFilter === 'TODAS' ? dashboard : dashboard.filter(r => r.uti === utiFilter),
     [dashboard, utiFilter]
   );
 
-  // Contagens dos smart filters (sempre da base UTI, independente de smart/search)
   const smartCounts = useMemo(() => ({
     todos: base.length,
     critico: base.filter(r => r.gravidade === 'critico').length,
+    watcher: base.filter(r => r.gravidade === 'moderado').length,
+    instavel: base.filter(r => r.gravidade === 'grave').length,
     sofa_up: base.filter(r => (r.delta_sofa_24h ?? 0) > 0).length,
     dva: base.filter(rowHasDVA).length,
     vm: base.filter(rowHasVM).length,
     sem_evolucao: base.filter(rowSemEvolucao).length,
   }), [base]);
 
-  // Visible: base + smart filter + busca
   const visible = useMemo(() => {
     let result = base;
-
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter(r =>
         r.nome.toLowerCase().includes(q) || r.leito.toLowerCase().includes(q)
       );
     }
-
     switch (smartFilter) {
-      case 'critico':      return result.filter(r => r.gravidade === 'critico');
-      case 'sofa_up':      return result.filter(r => (r.delta_sofa_24h ?? 0) > 0);
-      case 'dva':          return result.filter(rowHasDVA);
-      case 'vm':           return result.filter(rowHasVM);
+      case 'critico': return result.filter(r => r.gravidade === 'critico');
+      case 'watcher': return result.filter(r => r.gravidade === 'moderado');
+      case 'instavel': return result.filter(r => r.gravidade === 'grave');
+      case 'sofa_up': return result.filter(r => (r.delta_sofa_24h ?? 0) > 0);
+      case 'dva': return result.filter(rowHasDVA);
+      case 'vm': return result.filter(rowHasVM);
       case 'sem_evolucao': return result.filter(rowSemEvolucao);
-      default:             return result;
+      default: return result;
     }
   }, [base, smartFilter, search]);
+
+  const selectedRow = useMemo(
+    () => visible.find(r => r.paciente_id === selectedId) ?? dashboard.find(r => r.paciente_id === selectedId) ?? null,
+    [visible, dashboard, selectedId]
+  );
+
+  const navigatePatient = useCallback((dir: 1 | -1) => {
+    if (visible.length === 0) return;
+    const idx = selectedId ? visible.findIndex(r => r.paciente_id === selectedId) : -1;
+    const next = idx < 0
+      ? (dir === 1 ? 0 : visible.length - 1)
+      : (idx + dir + visible.length) % visible.length;
+    setSelectedId(visible[next].paciente_id);
+  }, [visible, selectedId, setSelectedId]);
+
+  const handleSelectPatient = useCallback((id: string) => {
+    setSelectedId(id);
+    if (janela === 'leitos') setJanela('estado');
+  }, [setSelectedId, janela, setJanela]);
+
+  // Auto-seleciona primeiro paciente se ID persistido não existe mais
+  useEffect(() => {
+    if (selectedId && !dashboard.some(r => r.paciente_id === selectedId) && visible.length > 0) {
+      setSelectedId(visible[0].paciente_id);
+    }
+  }, [selectedId, dashboard, visible, setSelectedId]);
+
+  const noModal = !modalId && !showNovoLeito;
+
+  const shortcuts = useCallback(() => {
+    const janelaMap: Record<string, Janela> = { '1': 'leitos', '2': 'tempo', '3': 'estado', '4': 'problema', '5': 'passagem' };
+    const map: Record<string, () => void> = {
+      'j': () => navigatePatient(1),
+      'k': () => navigatePatient(-1),
+      't': cycleTheme,
+      'n': () => setShowNovoLeito(true),
+      '?': () => setShowShortcuts(v => !v),
+      'Escape': () => { setShowShortcuts(false); setModalId(null); setSearch(''); },
+    };
+    for (const [key, j] of Object.entries(janelaMap)) {
+      map[key] = () => setJanela(j);
+    }
+    return map;
+  }, [cycleTheme, navigatePatient, setJanela]);
+
+  useKeyboardShortcuts(shortcuts(), noModal);
 
   const stats = useMemo(() => ({
     total: base.length,
     criticos: base.filter(r => r.gravidade === 'critico').length,
-    graves: base.filter(r => r.gravidade === 'grave').length,
+    watchers: base.filter(r => r.gravidade === 'moderado').length,
     piorando: base.filter(r => (r.delta_sofa_24h ?? 0) > 0).length,
   }), [base]);
 
@@ -184,11 +205,11 @@ export default function Dashboard({ session }: Props) {
     ? 'Tente remover o filtro ou a busca para ver todos.'
     : 'Admita um paciente usando a skill sasi-ingest-export ou o botão Novo Leito.';
 
+  const needsPatient = janela === 'tempo' || janela === 'estado' || janela === 'problema';
+
   return (
     <div className="min-h-screen bg-app text-app-text">
-      {/* HEADER */}
       <header className="sticky top-0 z-20 bg-app-card/95 backdrop-blur border-b border-app-border">
-        {/* Linha 1: logo + ações */}
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="bg-app-accent p-1.5 rounded-lg">
@@ -202,7 +223,7 @@ export default function Dashboard({ session }: Props) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {totalCriticos > 0 && (
               <div className="flex items-center gap-1.5 bg-red-950 text-red-300 px-2.5 py-1 rounded-lg text-xs font-bold">
                 <Bell className="w-3.5 h-3.5" /> {totalCriticos} CRÍTICOS
@@ -216,39 +237,10 @@ export default function Dashboard({ session }: Props) {
             <button
               onClick={() => setShowNovoLeito(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition"
-              title="Admitir paciente"
             >
-              <Plus className="w-3.5 h-3.5" />
-              Novo Leito
+              <Plus className="w-3.5 h-3.5" /> Novo Leito
             </button>
-            {dashboard.length > 0 && (
-              <>
-                <button
-                  onClick={async () => {
-                    const texto = gerarTextoPlantao(visible, utiFilter);
-                    await navigator.clipboard.writeText(texto);
-                    addToast('success', `Plantão copiado (${visible.length} pacientes)`);
-                  }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 text-xs font-medium rounded-lg border border-app-border transition"
-                  title="Copiar passagem de turno"
-                >
-                  <ClipboardCopy className="w-3.5 h-3.5" />
-                  Copiar
-                </button>
-                <button
-                  onClick={async () => {
-                    const { exportPassagemTurno } = await lazyExportPDF();
-                    exportPassagemTurno(visible, session.user.email ?? undefined);
-                  }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-app-tertiary hover:bg-app-tertiary/70 text-app-text-2 text-xs font-medium rounded-lg border border-app-border transition"
-                  title="Exportar PDF"
-                >
-                  <FileDown className="w-3.5 h-3.5" />
-                  PDF
-                </button>
-              </>
-            )}
-            <ViewSwitcher />
+            <JanelaNav />
             <ThemeToggle />
             <button
               onClick={() => window.location.reload()}
@@ -260,9 +252,7 @@ export default function Dashboard({ session }: Props) {
           </div>
         </div>
 
-        {/* Linha 2: stats clicáveis + busca + filtro UTI */}
         <div className="max-w-7xl mx-auto px-4 pb-2 flex flex-wrap items-center gap-2">
-          {/* Stats — números de críticos e ↑SOFA ativam o smart filter */}
           <div className="flex items-center gap-2 text-xs text-app-text-muted flex-1 min-w-0 flex-wrap">
             <span className="flex items-center gap-1 shrink-0">
               <Users className="w-3.5 h-3.5" />
@@ -271,33 +261,35 @@ export default function Dashboard({ session }: Props) {
             {stats.criticos > 0 && (
               <button
                 onClick={() => setSmartFilter(smartFilter === 'critico' ? 'todos' : 'critico')}
-                className={`transition hover:opacity-80 rounded px-1 font-semibold ${
-                  smartFilter === 'critico' ? 'text-red-300 underline underline-offset-2' : 'text-red-400'
+                className={`transition rounded px-1 font-semibold ${
+                  smartFilter === 'critico' ? 'text-red-300 underline' : 'text-red-400'
                 }`}
-                title="Filtrar críticos"
               >
                 <b>{stats.criticos}</b> crítico{stats.criticos > 1 ? 's' : ''}
               </button>
             )}
-            {stats.graves > 0 && (
-              <span className="text-orange-400">
-                <b>{stats.graves}</b> grave{stats.graves > 1 ? 's' : ''}
-              </span>
+            {stats.watchers > 0 && (
+              <button
+                onClick={() => setSmartFilter(smartFilter === 'watcher' ? 'todos' : 'watcher')}
+                className={`transition rounded px-1 ${
+                  smartFilter === 'watcher' ? 'text-amber-200 underline' : 'text-amber-400'
+                }`}
+              >
+                <b>{stats.watchers}</b> watcher{stats.watchers > 1 ? 's' : ''}
+              </button>
             )}
             {stats.piorando > 0 && (
               <button
                 onClick={() => setSmartFilter(smartFilter === 'sofa_up' ? 'todos' : 'sofa_up')}
-                className={`transition hover:opacity-80 rounded px-1 ${
-                  smartFilter === 'sofa_up' ? 'text-red-200 underline underline-offset-2' : 'text-red-300'
+                className={`transition rounded px-1 ${
+                  smartFilter === 'sofa_up' ? 'text-red-200 underline' : 'text-red-300'
                 }`}
-                title="Filtrar ↑SOFA"
               >
                 ↑SOFA: <b>{stats.piorando}</b>
               </button>
             )}
           </div>
 
-          {/* Busca por nome ou leito */}
           <div className="relative flex items-center shrink-0">
             <Search className="w-3.5 h-3.5 absolute left-2 text-app-text-muted pointer-events-none" />
             <input
@@ -308,17 +300,12 @@ export default function Dashboard({ session }: Props) {
               className="pl-7 pr-6 py-1 text-xs bg-app-tertiary border border-app-border rounded-lg text-app-text placeholder:text-app-text-muted focus:outline-none focus:border-app-accent w-36 focus:w-48 transition-all"
             />
             {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-1.5 text-app-text-muted hover:text-app-text"
-                aria-label="Limpar busca"
-              >
+              <button onClick={() => setSearch('')} className="absolute right-1.5 text-app-text-muted hover:text-app-text">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* Filtro por UTI */}
           <div className="flex items-center gap-1 shrink-0">
             <Filter className="w-3.5 h-3.5 text-app-text-muted" />
             {(['TODAS', ...UTIS] as UtiFilter[]).map(u => (
@@ -326,9 +313,7 @@ export default function Dashboard({ session }: Props) {
                 key={u}
                 onClick={() => setUtiFilter(u)}
                 className={`text-xs px-2.5 py-1 rounded transition ${
-                  utiFilter === u
-                    ? 'bg-app-accent text-white'
-                    : 'bg-app-tertiary text-app-text-muted hover:bg-app-tertiary/70 hover:text-app-text-2'
+                  utiFilter === u ? 'bg-app-accent text-white' : 'bg-app-tertiary text-app-text-muted hover:text-app-text-2'
                 }`}
               >
                 {u}
@@ -337,51 +322,51 @@ export default function Dashboard({ session }: Props) {
           </div>
         </div>
 
-        {/* Linha 3: smart filter pills */}
-        <div className="max-w-7xl mx-auto px-4 pb-2.5 flex items-center gap-1.5 overflow-x-auto">
-          {SMART_FILTERS.map(f => {
-            const count = smartCounts[f.id];
-            const isActive = smartFilter === f.id;
-            const hasResults = f.id === 'todos' || count > 0;
-            return (
-              <button
-                key={f.id}
-                onClick={() => setSmartFilter(f.id)}
-                disabled={!hasResults}
-                className={`shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition ${
-                  isActive
-                    ? `${f.activeClass} border-transparent font-semibold`
-                    : hasResults
-                    ? 'bg-app-tertiary text-app-text-muted border-app-border hover:text-app-text-2 hover:bg-app-tertiary/70'
-                    : 'bg-app-tertiary/40 text-app-text-muted/40 border-app-border/40 cursor-not-allowed'
-                }`}
-                title={`${f.label}: ${count} paciente${count !== 1 ? 's' : ''}`}
-              >
-                {f.icon}
-                <span>{f.label}</span>
-                {f.id !== 'todos' && (
-                  <span className="font-bold tabular-nums">{count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </header>
-
-      {/* MAIN */}
-      <main className="max-w-7xl mx-auto px-4 py-4">
-        <CriticalAlerts patients={visible} onSelect={setSelectedId} />
-
-        {loading && viewMode === 'plantao' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {Array.from({ length: 8 }).map((_, i) => <LeitoCardSkeleton key={i} />)}
+        {janela === 'leitos' && (
+          <div className="max-w-7xl mx-auto px-4 pb-2.5 flex items-center gap-1.5 overflow-x-auto">
+            {SMART_FILTERS.map(f => {
+              const count = smartCounts[f.id];
+              const isActive = smartFilter === f.id;
+              const hasResults = f.id === 'todos' || count > 0;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setSmartFilter(f.id)}
+                  disabled={!hasResults}
+                  className={`shrink-0 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition ${
+                    isActive
+                      ? `${f.activeClass} border-transparent font-semibold`
+                      : hasResults
+                      ? 'bg-app-tertiary text-app-text-muted border-app-border hover:text-app-text-2'
+                      : 'bg-app-tertiary/40 text-app-text-muted/40 border-app-border/40 cursor-not-allowed'
+                  }`}
+                >
+                  {f.icon}
+                  <span>{f.label}</span>
+                  {f.id !== 'todos' && <span className="font-bold tabular-nums">{count}</span>}
+                </button>
+              );
+            })}
           </div>
         )}
-        {loading && viewMode === 'round' && <SplitSkeleton />}
-        {loading && viewMode === 'editor' && (
-          <div className="text-center text-app-text-muted py-12 text-sm animate-pulse">
-            Carregando trincheira…
-          </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-4 space-y-4">
+        <CriticalAlerts patients={visible} onSelect={id => { setSelectedId(id); setModalTab('detalhes'); setModalId(id); }} />
+
+        {needsPatient && (
+          <PatientStrip
+            row={selectedRow}
+            onPrev={() => navigatePatient(-1)}
+            onNext={() => navigatePatient(1)}
+            onEdit={() => {
+              if (selectedId) {
+                setModalTab('evolucao');
+                setModalId(selectedId);
+              }
+            }}
+            onSelectFromLeitos={() => setJanela('leitos')}
+          />
         )}
 
         {error && (
@@ -390,29 +375,53 @@ export default function Dashboard({ session }: Props) {
           </div>
         )}
 
-        {!loading && visible.length === 0 && (
-          <EmptyState icon={BedDouble} title={emptyTitle} description={emptyDesc} />
+        {janela === 'leitos' && (
+          <JanelaLeitos
+            rows={visible}
+            loading={loading}
+            emptyTitle={emptyTitle}
+            emptyDesc={emptyDesc}
+            onSelect={handleSelectPatient}
+            selectedId={selectedId}
+          />
         )}
 
-        {!loading && visible.length > 0 && (
-          <>
-            {viewMode === 'plantao' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {visible.map(row => (
-                  <LeitoCard key={row.paciente_id} row={row} onSelect={setSelectedId} />
-                ))}
-              </div>
-            )}
-            {viewMode === 'round' && (
-              <SplitView patients={visible} onOpenFull={setSelectedId} />
-            )}
-            {viewMode === 'editor' && <TableView patients={visible} onSelect={setSelectedId} />}
-          </>
+        {janela === 'tempo' && (
+          <EixoTempo
+            pacienteId={selectedId}
+            summary={detail.summary}
+            evolucoes={detail.evolucoes}
+            pendencias={detail.pendencias}
+            loading={detail.loading}
+          />
+        )}
+
+        {janela === 'estado' && (
+          <EixoEstado
+            paciente={detail.paciente}
+            evolucao={detail.evolucao}
+            loading={detail.loading}
+            onSaved={detail.refresh}
+          />
+        )}
+
+        {janela === 'problema' && (
+          <FichaEvolucao
+            paciente={detail.paciente}
+            evolucao={detail.evolucao}
+            pendencias={detail.pendencias}
+            loading={detail.loading}
+            onSaved={detail.refresh}
+          />
+        )}
+
+        {janela === 'passagem' && (
+          <PassagemTurno rows={visible} loading={loading} userEmail={session.user.email ?? undefined} />
         )}
       </main>
 
       <footer className="max-w-7xl mx-auto px-4 py-6 text-[11px] text-app-text-muted text-center flex items-center justify-center gap-3">
-        <span>SASI v1.0 · Supabase realtime · LGPD-RLS · {new Date().toLocaleString('pt-BR')}</span>
+        <span>SASI v2.0 · 5 Janelas · {new Date().toLocaleString('pt-BR')}</span>
         <button
           onClick={() => setShowShortcuts(true)}
           className="px-1.5 py-0.5 rounded border border-app-border bg-app-tertiary hover:text-app-text-2 transition text-[10px] font-mono"
@@ -421,15 +430,19 @@ export default function Dashboard({ session }: Props) {
         </button>
       </footer>
 
-      {selectedId && (
-        <PatientModal pacienteId={selectedId} onClose={() => setSelectedId(null)} />
+      {modalId && (
+        <PatientModal
+          pacienteId={modalId}
+          initialTab={modalTab}
+          onClose={() => setModalId(null)}
+        />
       )}
 
       {showNovoLeito && (
         <NovoLeitoModal
           userId={session.user.id}
           onClose={() => setShowNovoLeito(false)}
-          onSuccess={() => {}}
+          onSuccess={() => addToast('success', 'Paciente admitido')}
         />
       )}
 
@@ -446,12 +459,15 @@ export default function Dashboard({ session }: Props) {
             <div className="space-y-1.5 text-xs">
               {[
                 ['?', 'Abrir/fechar este painel'],
-                ['t', 'Ciclar tema (dark → clinical → light)'],
+                ['1', 'Janela Leitos'],
+                ['2', 'Eixo Tempo'],
+                ['3', 'Planilhão Geral'],
+                ['4', 'Ficha de Evolução'],
+                ['5', 'Passagem de Turno'],
+                ['j / k', 'Próximo / anterior paciente'],
+                ['t', 'Ciclar tema'],
                 ['n', 'Novo leito'],
                 ['Esc', 'Fechar modal / limpar busca'],
-                ['g p', 'Modo Plantão (Cards)'],
-                ['g r', 'Modo Round (Split)'],
-                ['g e', 'Modo Editor (Tabela)'],
               ].map(([key, desc]) => (
                 <div key={key} className="flex items-center gap-3">
                   <kbd className="shrink-0 min-w-[40px] text-center px-1.5 py-0.5 rounded border border-app-border bg-app-tertiary font-mono text-[11px] text-app-text-2">

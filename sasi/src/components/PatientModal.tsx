@@ -1,5 +1,5 @@
 // ============================================================================
-// SASI · PatientModal — 3 abas: Detalhes / Editar / Evolução
+// SASI · PatientModal — 2 abas: Detalhes (+ Patient Summary ao lado) / Evolução (+ Ficha)
 // Redesign: SystemBlock com cor por sistema + labels clínicos (Gemini-style)
 // Editar: edição inline de identificação (pacientes) e sistemas (evolucoes).
 // Pendências aceitam toggle inline (RLS = user_id).
@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   X, Clock, User, Activity, Heart, Droplets,
   Thermometer, Brain, Wind, Zap, FlaskConical, TestTubes,
-  ClipboardList, ChevronRight, Edit3, FileText,
+  ClipboardList, ChevronRight, FileText,
   CheckCircle2, Circle, Loader2, BarChart3, Bug,
   Plus, Copy, Printer, Check,
 } from 'lucide-react';
@@ -30,15 +30,16 @@ import ClinicalExtras from './ClinicalExtras';
 import VitalsLabsPanel from './VitalsLabsPanel';
 import { generatePassagemTurno } from '../lib/exportText';
 import FichaCompleta from './FichaCompleta';
-import PatientSummaryView from './PatientSummary';
+import PatientSummaryTable from './PatientSummaryTable';
 import type { PatientSummary } from '../lib/supabaseClient';
 import { useSupabasePatients } from '../hooks/useSupabasePatients';
 
-type Tab = 'detalhes' | 'editar' | 'evolucao';
+type Tab = 'detalhes' | 'evolucao';
 
 interface Props {
   pacienteId: string;
   onClose: () => void;
+  initialTab?: Tab;
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -196,7 +197,7 @@ function EvolucaoTab({
     if (error) {
       setMsg({ ok: false, text: `Erro: ${error.message}` });
     } else {
-      setMsg({ ok: true, text: 'Evolução criada! Edite na aba Editar.' });
+      setMsg({ ok: true, text: 'Evolução criada! Preencha a Ficha de Evolução abaixo.' });
       onCreated();
     }
     setCreating(false);
@@ -241,7 +242,7 @@ function EvolucaoTab({
           <span className="font-semibold">Última evolução:</span>{' '}
           {new Date(evolucao.created_at).toLocaleString('pt-BR')} · Plantão: {evolucao.plantao}
           <p className="mt-1 text-app-text-muted/60">
-            Após criar, edite os sistemas clínicos na aba <strong>Editar</strong>.
+            Preencha a Ficha de Evolução no painel abaixo.
           </p>
         </div>
       )}
@@ -251,8 +252,8 @@ function EvolucaoTab({
 
 // ── main component ─────────────────────────────────────────────────────────
 
-export default function PatientModal({ pacienteId, onClose }: Props) {
-  const [tab, setTab] = useState<Tab>('detalhes');
+export default function PatientModal({ pacienteId, onClose, initialTab = 'detalhes' }: Props) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [paciente, setPaciente] = useState<Paciente | null>(null);
   const [evolucao, setEvolucao] = useState<Evolucao | null>(null);
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
@@ -372,11 +373,8 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
     .map((e) => e.valor_num)
     .filter((v): v is number => typeof v === 'number');
 
-  // ── Editar tab state agora gerenciado pela FichaCompleta ──
-
-  const TABS: { key: Tab; label: string; Icon: typeof Edit3 }[] = [
+  const TABS: { key: Tab; label: string; Icon: typeof User }[] = [
     { key: 'detalhes', label: 'Detalhes', Icon: User },
-    { key: 'editar', label: 'Editar', Icon: Edit3 },
     { key: 'evolucao', label: 'Evolução', Icon: FileText },
   ];
 
@@ -389,7 +387,9 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="relative w-full max-w-4xl bg-app-card border border-app-border rounded-2xl shadow-2xl my-4 sasi-fade-in">
+      <div className={`relative w-full bg-app-card border border-app-border rounded-2xl shadow-2xl my-4 sasi-fade-in ${
+        tab === 'detalhes' ? 'max-w-7xl' : 'max-w-5xl'
+      }`}>
         {/* CLOSE */}
         <button
           onClick={onClose}
@@ -498,29 +498,8 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
             <div className="p-5">
               {/* ═══════════ TAB: DETALHES ═══════════ */}
               {tab === 'detalhes' && (
-                <>
-                  <PatientSummaryView 
-                    summary={patientSummary} 
-                    loading={patientSummaryLoading}
-                    onSave={async (updated) => {
-                      try {
-                        await savePatientSummary(pacienteId, updated);
-                        setPatientSummary(updated as PatientSummary);
-                      } catch (e: any) {
-                        const msg = e?.message?.includes('patient_summary') 
-                          ? 'Coluna patient_summary ainda não existe no banco. Rode o ALTER TABLE no Supabase SQL Editor.'
-                          : 'Erro ao salvar Patient Summary: ' + (e?.message || e);
-                        alert(msg);
-                      }
-                    }}
-                    onEdit={() => { /* opcional: pode focar a aba de edição */ }}
-                  />
-                  <div className="h-4" />
-                </>
-              )}
-
-              {tab === 'detalhes' && (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-6">
+                  <div className="space-y-4 min-w-0">
                   {/* IDENTIFICAÇÃO + SOFA row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -776,29 +755,54 @@ export default function PatientModal({ pacienteId, onClose }: Props) {
                     <EmptyState
                       icon={FileText}
                       title="Nenhuma evolução registrada"
-                      description="Use a skill sasi-ingest-export ou a edge function /ocr-ingest pra registrar a primeira evolução."
+                      description="Use a aba Evolução para criar a primeira evolução ou a skill sasi-ingest-export."
                     />
                   )}
+                  </div>
+
+                  {/* Painel lateral — Patient Summary base tabular */}
+                  <div className="min-w-0 xl:border-l xl:border-app-border xl:pl-5">
+                    <PatientSummaryTable
+                      summary={patientSummary}
+                      pacienteId={pacienteId}
+                      loading={patientSummaryLoading}
+                      onSave={async (updated) => {
+                        try {
+                          await savePatientSummary(pacienteId, updated);
+                          setPatientSummary(updated);
+                        } catch (e: unknown) {
+                          const msg = e instanceof Error && e.message?.includes('patient_summary')
+                            ? 'Coluna patient_summary ainda não existe no banco. Rode o ALTER TABLE no Supabase SQL Editor.'
+                            : `Erro ao salvar Patient Summary: ${e instanceof Error ? e.message : e}`;
+                          alert(msg);
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* ═══════════ TAB: EDITAR — Ficha completa estilo Gemini ═══════════ */}
-              {tab === 'editar' && (
-                <FichaCompleta
-                  paciente={paciente}
-                  evolucao={evolucao}
-                  pendencias={pendencias}
-                  onSaved={() => void load()}
-                />
-              )}
-
-              {/* ═══════════ TAB: EVOLUÇÃO ═══════════ */}
+              {/* ═══════════ TAB: EVOLUÇÃO — Nova evolução + Ficha de Evolução ═══════════ */}
               {tab === 'evolucao' && (
-                <EvolucaoTab
-                  pacienteId={pacienteId}
-                  evolucao={evolucao}
-                  onCreated={load}
-                />
+                <div className="space-y-5">
+                  <EvolucaoTab
+                    pacienteId={pacienteId}
+                    evolucao={evolucao}
+                    onCreated={load}
+                  />
+                  <div className="border-t border-app-border pt-4">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-app-text-muted mb-3">
+                      <FileText className="w-3.5 h-3.5" />
+                      Ficha de Evolução
+                    </div>
+                    <FichaCompleta
+                      paciente={paciente}
+                      evolucao={evolucao}
+                      pendencias={pendencias}
+                      onSaved={() => void load()}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </>

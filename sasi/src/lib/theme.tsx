@@ -1,6 +1,6 @@
 // ============================================================================
 // SASI · theme.tsx
-// Estado global de tema (3 modos) e modo de visualização (3 modos).
+// Estado global: 3 temas + 5 janelas de navegação.
 // Persiste em localStorage. Aplica `body.theme-{tema}` pra CSS vars.
 // ============================================================================
 import {
@@ -13,17 +13,28 @@ import {
 } from 'react';
 
 export type Theme = 'dark' | 'clinical' | 'light';
-export type ViewMode = 'plantao' | 'round' | 'editor';
+
+/** 5 janelas do redesign SASI (Jun 2026) */
+export type Janela = 'leitos' | 'tempo' | 'estado' | 'problema' | 'passagem';
+
+export const JANELAS: readonly { id: Janela; label: string; shortcut: string }[] = [
+  { id: 'leitos', label: 'Leitos', shortcut: '1' },
+  { id: 'tempo', label: 'Eixo Tempo', shortcut: '2' },
+  { id: 'estado', label: 'Planilhão', shortcut: '3' },
+  { id: 'problema', label: 'Ficha Evolução', shortcut: '4' },
+  { id: 'passagem', label: 'Passagem', shortcut: '5' },
+] as const;
 
 const THEME_KEY = 'sasi.theme';
-const VIEW_KEY = 'sasi.viewMode';
+const JANELA_KEY = 'sasi.janela';
+const LEGACY_VIEW_KEY = 'sasi.viewMode';
 
 interface UIState {
   theme: Theme;
-  viewMode: ViewMode;
+  janela: Janela;
   cycleTheme: () => void;
   setTheme: (t: Theme) => void;
-  setViewMode: (v: ViewMode) => void;
+  setJanela: (j: Janela) => void;
 }
 
 const UIContext = createContext<UIState | null>(null);
@@ -39,48 +50,52 @@ function readStored<T extends string>(key: string, fallback: T, allowed: readonl
 }
 
 const THEMES: readonly Theme[] = ['dark', 'clinical', 'light'];
-const VIEW_MODES: readonly ViewMode[] = ['plantao', 'round', 'editor'];
+const JANELA_IDS: readonly Janela[] = ['leitos', 'tempo', 'estado', 'problema', 'passagem'];
+
+function migrateJanela(): Janela {
+  const stored = readStored<Janela>(JANELA_KEY, 'leitos', JANELA_IDS);
+  if (stored !== 'leitos') return stored;
+  // Migra viewMode legado → janela leitos (plantão/round/editor viram leitos)
+  try {
+    const legacy = window.localStorage.getItem(LEGACY_VIEW_KEY);
+    if (legacy) window.localStorage.removeItem(LEGACY_VIEW_KEY);
+  } catch { /* no-op */ }
+  return 'leitos';
+}
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() =>
     readStored<Theme>(THEME_KEY, 'dark', THEMES)
   );
-  const [viewMode, setViewModeState] = useState<ViewMode>(() =>
-    readStored<ViewMode>(VIEW_KEY, 'plantao', VIEW_MODES)
-  );
+  const [janela, setJanelaState] = useState<Janela>(migrateJanela);
 
-  // Aplica classe no <body> pro CSS responder
   useEffect(() => {
     const body = document.body;
     body.classList.remove('theme-dark', 'theme-clinical', 'theme-light');
     body.classList.add(`theme-${theme}`);
     try {
       window.localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      /* no-op */
-    }
+    } catch { /* no-op */ }
   }, [theme]);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(VIEW_KEY, viewMode);
-    } catch {
-      /* no-op */
-    }
-  }, [viewMode]);
+      window.localStorage.setItem(JANELA_KEY, janela);
+    } catch { /* no-op */ }
+  }, [janela]);
 
   const value = useMemo<UIState>(
     () => ({
       theme,
-      viewMode,
+      janela,
       setTheme: setThemeState,
-      setViewMode: setViewModeState,
+      setJanela: setJanelaState,
       cycleTheme: () => {
         const idx = THEMES.indexOf(theme);
         setThemeState(THEMES[(idx + 1) % THEMES.length]);
       },
     }),
-    [theme, viewMode]
+    [theme, janela]
   );
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
@@ -88,6 +103,6 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
 export function useUI(): UIState {
   const ctx = useContext(UIContext);
-  if (!ctx) throw new Error('useUI must be used inside <UIProvider>');
+  if (!ctx) throw new Error('useUI must be used within UIProvider');
   return ctx;
 }

@@ -29,7 +29,17 @@
 Escrita de evoluções **sempre via edge function ou skill** (`sasi-ingest-export`) com audit log obrigatório (`ingest_audit_log`). Edição manual no frontend é read-only ou limitada.
 
 **3 Temas:** `dark` (padrão), `clinical` (âmbar alta luminância UTI), `light`.  
-**3 Modos de visualização:** `plantão` (cards), `round` (SplitView), `editor` (tabela densa).
+**5 Janelas (redesign 11/06/2026):**
+
+| # | Janela | Atalho | Conteúdo |
+|---|--------|--------|----------|
+| 1 | Leitos | `1` | Cards por gravidade (Estável/Watcher/Instável/Crítico) + filtros smart |
+| 2 | Eixo Tempo | `2` | HPMA, tabelão labs seriais, interconsultas, programação/pendências |
+| 3 | Eixo Estado | `3` | Terapias vigentes, vitais+BH, labs do dia, exame físico |
+| 4 | Problema→Ação | `4` | Pares 1:1 problema/conduta com meta numérica |
+| 5 | Passagem | `5` | Lista 3-linhas por paciente + copiar/PDF |
+
+Navegação: `JanelaNav` no header · `j`/`k` troca paciente · seleção persistida em `localStorage`.
 
 ---
 
@@ -64,7 +74,7 @@ Documento completo no Google Drive: **"Plano de ação login e autenticação SA
 | # | Funcionalidade                              | Commit     | Status     | Observação |
 |---|---------------------------------------------|------------|------------|----------|
 | 1 | 3 temas (dark/clinical/light) + tokens UI   | 6020c0e    | ✅ Ativo   | `lib/theme.tsx` |
-| 2 | 3 modos de visualização (plantão/round/editor) | 6020c0e | ✅ Ativo   | Persistido em localStorage |
+| 2 | 5 janelas de navegação (Leitos/Tempo/Estado/Problema/Passagem) | redesign-11jun | ✅ Ativo | Substitui plantão/round/editor |
 | 3 | Calculadora de infusão (DVA + Sedação)      | 6020c0e    | ✅ Ativo   | `lib/drugs.ts` + `InfusionEditor.tsx` |
 | 4 | Error Boundary global                       | 327f318    | ✅ Ativo   | — |
 | 5 | Skeletons + Empty States                    | 0cb1a2a    | ✅ Ativo   | — |
@@ -209,6 +219,7 @@ Ver arquivo completo: [AGENTS.md](AGENTS.md)
 | 06-Mai     | **Auth bypass temporário** (mock + dev_bypass RLS) | fc8cd75 — hospital bloqueia Gmail |
 | 06-09-Mai  | Port de features do protótipo Gemini (FichaCompleta, LeitoCard, labs estruturados) | d8a648c, 760b52d, b3c82eb |
 | 11-Jun     | **Faxina final do repo** — scaffold raiz, skills IA, docs duplicados, Supabase unificado | chore/faxina-11jun |
+| 11-Jun     | **Redesign 5 Janelas** — severity/Watcher, clinicalExtract, Passagem 3-linhas | feat/5-janelas |
 
 ---
 
@@ -221,7 +232,7 @@ Ver arquivo completo: [AGENTS.md](AGENTS.md)
 ---
 
 **Status resumido (11/06/2026):**  
-**Produção estável** com bypass de auth. Repo limpo: `sasi/` + `supabase/` + `sasi-mcp-server/`. Maior risco residual = drift de schema + dependência do bypass de autenticação.
+**Produção estável** com bypass de auth. Frontend redesenhado com **5 janelas** (`severity.ts`, `clinicalExtract.ts`, `JanelaNav`). Repo limpo: `sasi/` + `supabase/` + `sasi-mcp-server/`. Maior risco residual = drift de schema + dependência do bypass de autenticação.
 
 ---
 
