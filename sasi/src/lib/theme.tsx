@@ -22,6 +22,7 @@ interface UIState {
   theme: Theme;
   viewMode: ViewMode;
   cycleTheme: () => void;
+  toggleTacticalClinical: () => void;
   setTheme: (t: Theme) => void;
   setViewMode: (v: ViewMode) => void;
 }
@@ -78,6 +79,11 @@ export function UIProvider({ children }: { children: ReactNode }) {
       cycleTheme: () => {
         const idx = THEMES.indexOf(theme);
         setThemeState(THEMES[(idx + 1) % THEMES.length]);
+      },
+      // Sidebar/topbar toggle: only flips Tactical (dark) ↔ Clinical (light/blue).
+      // Legacy 'light' theme is treated as Tactical-ish and goes to Clinical.
+      toggleTacticalClinical: () => {
+        setThemeState(theme === 'clinical' ? 'dark' : 'clinical');
       },
     }),
     [theme, viewMode]
