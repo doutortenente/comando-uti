@@ -14,6 +14,9 @@ import {
 
 export type Theme = 'dark' | 'clinical' | 'light';
 
+/** 3 view modes do Plantão Board (Cards / Round / Tabela) */
+export type ViewMode = 'plantao' | 'round' | 'editor';
+
 /** 5 janelas do redesign SASI (Jun 2026) */
 export type Janela = 'leitos' | 'tempo' | 'estado' | 'problema' | 'passagem';
 
@@ -27,14 +30,16 @@ export const JANELAS: readonly { id: Janela; label: string; shortcut: string }[]
 
 const THEME_KEY = 'sasi.theme';
 const JANELA_KEY = 'sasi.janela';
-const LEGACY_VIEW_KEY = 'sasi.viewMode';
+const VIEW_KEY = 'sasi.viewMode';
 
 interface UIState {
   theme: Theme;
+  viewMode: ViewMode;
   janela: Janela;
   cycleTheme: () => void;
   toggleTacticalClinical: () => void;
   setTheme: (t: Theme) => void;
+  setViewMode: (v: ViewMode) => void;
   setJanela: (j: Janela) => void;
 }
 
@@ -51,24 +56,19 @@ function readStored<T extends string>(key: string, fallback: T, allowed: readonl
 }
 
 const THEMES: readonly Theme[] = ['dark', 'clinical', 'light'];
+const VIEW_MODES: readonly ViewMode[] = ['plantao', 'round', 'editor'];
 const JANELA_IDS: readonly Janela[] = ['leitos', 'tempo', 'estado', 'problema', 'passagem'];
-
-function migrateJanela(): Janela {
-  const stored = readStored<Janela>(JANELA_KEY, 'leitos', JANELA_IDS);
-  if (stored !== 'leitos') return stored;
-  // Migra viewMode legado → janela leitos (plantão/round/editor viram leitos)
-  try {
-    const legacy = window.localStorage.getItem(LEGACY_VIEW_KEY);
-    if (legacy) window.localStorage.removeItem(LEGACY_VIEW_KEY);
-  } catch { /* no-op */ }
-  return 'leitos';
-}
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() =>
     readStored<Theme>(THEME_KEY, 'dark', THEMES)
   );
-  const [janela, setJanelaState] = useState<Janela>(migrateJanela);
+  const [viewMode, setViewModeState] = useState<ViewMode>(() =>
+    readStored<ViewMode>(VIEW_KEY, 'plantao', VIEW_MODES)
+  );
+  const [janela, setJanelaState] = useState<Janela>(() =>
+    readStored<Janela>(JANELA_KEY, 'leitos', JANELA_IDS)
+  );
 
   useEffect(() => {
     const body = document.body;
@@ -81,6 +81,12 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      window.localStorage.setItem(VIEW_KEY, viewMode);
+    } catch { /* no-op */ }
+  }, [viewMode]);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem(JANELA_KEY, janela);
     } catch { /* no-op */ }
   }, [janela]);
@@ -88,8 +94,10 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const value = useMemo<UIState>(
     () => ({
       theme,
+      viewMode,
       janela,
       setTheme: setThemeState,
+      setViewMode: setViewModeState,
       setJanela: setJanelaState,
       cycleTheme: () => {
         const idx = THEMES.indexOf(theme);
@@ -101,7 +109,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
         setThemeState(theme === 'clinical' ? 'dark' : 'clinical');
       },
     }),
-    [theme, janela]
+    [theme, viewMode, janela]
   );
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
