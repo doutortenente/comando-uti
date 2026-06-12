@@ -20,7 +20,9 @@ import PatientModal from './PatientModal';
 import CriticalAlerts from './CriticalAlerts';
 import SplitView from './SplitView';
 import TableView from './TableView';
-import Sidebar from './Sidebar';
+import Sidebar, { type SasiView } from './Sidebar';
+import PacientesIndex from './PacientesIndex';
+import PacientePage from './PacientePage';
 import TopBar from './TopBar';
 import FiltersBar from './FiltersBar';
 import { BedDouble } from 'lucide-react';
@@ -40,6 +42,8 @@ export default function Dashboard({ session }: Props) {
   const { totalCriticos, totalWarnings } = useClinicalAlerts();
   const { addToast } = useToasts();
   const { viewMode, setViewMode, cycleTheme } = useUI();
+  const [activeView, setActiveView] = useState<SasiView>('overview');
+  const [pacientePageId, setPacientePageId] = useState<string | null>(null);
   const [utiFilter, setUtiFilter] = useState<UtiFilter>('TODAS');
   const [smartFilter, setSmartFilter] = useState<SmartFilter>('todos');
   const [search, setSearch] = useState('');
@@ -55,7 +59,7 @@ export default function Dashboard({ session }: Props) {
     't': cycleTheme,
     'n': () => setShowNovoLeito(true),
     '?': () => setShowShortcuts(v => !v),
-    'Escape': () => { setShowShortcuts(false); setSelectedId(null); setSearch(''); },
+    'Escape': () => { setShowShortcuts(false); setSelectedId(null); setSearch(''); setPacientePageId(null); },
     'g p': () => setViewMode('plantao'),
     'g r': () => setViewMode('round'),
     'g e': () => setViewMode('editor'),
@@ -117,8 +121,24 @@ export default function Dashboard({ session }: Props) {
     exportPassagemTurno(visible, session.user.email ?? undefined);
   }, [visible, session.user.email]);
 
+  // Alertas vivem na Visão Geral: navega pra ela antes de rolar ao banner.
   const scrollToAlertas = useCallback(() => {
-    alertsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveView('overview');
+    setPacientePageId(null);
+    requestAnimationFrame(() => {
+      alertsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+
+  const handleNavigate = useCallback((view: SasiView) => {
+    setActiveView(view);
+    setPacientePageId(null);
+  }, []);
+
+  const openProntuario = useCallback((id: string) => {
+    setSelectedId(null);
+    setActiveView('pacientes');
+    setPacientePageId(id);
   }, []);
 
   const emptyTitle = (() => {
@@ -138,6 +158,8 @@ export default function Dashboard({ session }: Props) {
   return (
     <div className="flex h-screen overflow-hidden bg-app text-app-text">
       <Sidebar
+        activeView={activeView}
+        onNavigate={handleNavigate}
         onPassagemClick={handleExportPDF}
         onAlertasClick={scrollToAlertas}
         alertasCriticos={totalCriticos}
@@ -155,6 +177,25 @@ export default function Dashboard({ session }: Props) {
         />
 
         <div className="flex-1 overflow-y-auto">
+          {activeView === 'pacientes' && (
+            <main className="px-5 py-4">
+              {pacientePageId ? (
+                <PacientePage
+                  pacienteId={pacientePageId}
+                  onBack={() => setPacientePageId(null)}
+                />
+              ) : (
+                <PacientesIndex
+                  patients={dashboard}
+                  loading={loading}
+                  onOpen={setPacientePageId}
+                />
+              )}
+            </main>
+          )}
+
+          {activeView === 'overview' && (
+          <>
           <FiltersBar
             search={search}
             setSearch={setSearch}
@@ -209,6 +250,8 @@ export default function Dashboard({ session }: Props) {
               </>
             )}
           </main>
+          </>
+          )}
 
           <footer className="px-5 py-6 text-[11px] text-app-text-muted text-center flex items-center justify-center gap-3">
             <span>SASI v1.0 · Supabase realtime · LGPD-RLS · {new Date().toLocaleString('pt-BR')}</span>
@@ -223,7 +266,11 @@ export default function Dashboard({ session }: Props) {
       </div>
 
       {selectedId && (
-        <PatientModal pacienteId={selectedId} onClose={() => setSelectedId(null)} />
+        <PatientModal
+          pacienteId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onOpenProntuario={openProntuario}
+        />
       )}
 
       {showNovoLeito && (

@@ -1,20 +1,26 @@
 // ============================================================================
 // SASI · Sidebar — rail de comando navy, Plantão Board
-// "Visão Geral" é a única view real (este dashboard). Os demais itens
-// disparam ações existentes (Passagem de Turno → PDF, Alertas → scroll) ou
-// ficam inertes ("Em breve") quando ainda não há a view correspondente.
+// Views reais: "Visão Geral" (dashboard) e "Pacientes" (índice → prontuário).
+// Os demais itens disparam ações existentes (Passagem de Turno → PDF,
+// Alertas → scroll) ou ficam inertes ("Em breve") quando ainda não há view.
 // ============================================================================
 import {
   Activity, LayoutGrid, Users, ClipboardList, FlaskConical, Bell,
 } from 'lucide-react';
 
+export type SasiView = 'overview' | 'pacientes';
+
 interface Props {
+  activeView: SasiView;
+  onNavigate: (view: SasiView) => void;
   onPassagemClick: () => void;
   onAlertasClick: () => void;
   alertasCriticos?: number;
 }
 
-export default function Sidebar({ onPassagemClick, onAlertasClick, alertasCriticos = 0 }: Props) {
+export default function Sidebar({
+  activeView, onNavigate, onPassagemClick, onAlertasClick, alertasCriticos = 0,
+}: Props) {
   return (
     <aside className="sasi-rail">
       <div className="sasi-rail__brand">
@@ -23,12 +29,20 @@ export default function Sidebar({ onPassagemClick, onAlertasClick, alertasCritic
         </div>
       </div>
 
-      <button className="sasi-rail__item on" type="button">
+      <button
+        className={`sasi-rail__item${activeView === 'overview' ? ' on' : ''}`}
+        type="button"
+        onClick={() => onNavigate('overview')}
+      >
         <LayoutGrid className="w-[17px] h-[17px]" />
         <span>Visão Geral</span>
       </button>
 
-      <button className="sasi-rail__item" type="button" disabled title="Em breve">
+      <button
+        className={`sasi-rail__item${activeView === 'pacientes' ? ' on' : ''}`}
+        type="button"
+        onClick={() => onNavigate('pacientes')}
+      >
         <Users className="w-[17px] h-[17px]" />
         <span>Pacientes</span>
       </button>

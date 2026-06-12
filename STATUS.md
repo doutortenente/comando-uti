@@ -78,6 +78,8 @@ Documento completo no Google Drive: **"Plano de ação login e autenticação SA
 |14 | Redesign Gemini-style + FichaCompleta       | d8a648c + 760b52d | ✅ Ativo | Replica exata do protótipo Gemini (edição inline 7 sistemas) |
 |15 | Sinais vitais + labs estruturados           | b3c82eb    | ✅ Ativo   | Import de planilhas Excel |
 |16 | LeitoCard com border-l por gravidade        | c780f71    | ✅ Ativo   | — |
+|17 | Plantão Board: shell Sidebar/TopBar/FiltersBar | e526bad | ✅ Ativo   | PR #12 |
+|18 | View Pacientes (índice + página-prontuário) | 12/06/2026 | ✅ Ativo   | `PacientesIndex` + `PacientePage` (reusa FichaCompleta/TimelineDrawer); botão "Prontuário" no modal |
 
 **Funcionalidades em destaque recentes (maio/2026):**  
 - `FichaCompleta.tsx` — edição completa de todos os sistemas (neuro, resp, hemo, tgi, renal, hemato, infecto) + DVA/sedativos + impressão/conduta/pendências.  
