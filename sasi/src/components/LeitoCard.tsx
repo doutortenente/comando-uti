@@ -57,6 +57,16 @@ function getProblemas(row: DashboardRow): ProblemaDisplay[] {
   return [];
 }
 
+// Rótulos PT-BR de gravidade ("Watcher" = jargão de round para o moderado
+// que merece vigilância) — o valor cru do banco fica só nas classes CSS.
+const GRAVIDADE_LABEL: Record<string, string> = {
+  estavel: 'Estável',
+  moderado: 'Watcher',
+  grave: 'Instável',
+  critico: 'Crítico',
+  obito: 'Óbito',
+};
+
 const VETOR_STYLE: Record<string, { badge: string; row: string }> = {
   '↑': { badge: 'text-red-400 font-black text-base leading-none', row: 'text-app-text font-medium' },
   '↓': { badge: 'text-emerald-400 font-black text-base leading-none', row: 'text-app-text-2' },
@@ -91,7 +101,7 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
       onClick={() => onSelect?.(row.paciente_id)}
       className={`group relative text-left w-full rounded-2xl border transition shadow-md sasi-fade-in card-grav-${row.gravidade} ${
         compact ? 'p-3' : 'p-4'
-      } ${isSeptic || row.gravidade === 'critico' ? 'sasi-critical-pulse' : ''} hover:shadow-xl hover:-translate-y-[1px] cursor-pointer active:scale-[0.985]`}
+      } ${isSeptic || row.gravidade === 'critico' ? 'sasi-critical-pulse' : ''} hover:shadow-xl hover:-translate-y-[1px] cursor-pointer active:scale-[0.992]`}
     >
       {/* HEADER — Leito + UTI + SOFA + Delta (ultra-visível) */}
       <div className={`flex items-center justify-between gap-2 ${compact ? 'mb-1' : 'mb-1.5'}`}>
@@ -180,7 +190,7 @@ export default function LeitoCard({ row, onSelect, compact = false }: Props) {
       {/* BADGE STRIP */}
       <div className={`${compact ? 'mt-0.5' : 'pt-1.5 border-t border-app-border/30'} flex flex-wrap items-center gap-1.5`}>
         <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded gravidade-${row.gravidade}`}>
-          {row.gravidade}
+          {GRAVIDADE_LABEL[row.gravidade] ?? row.gravidade}
         </span>
 
         {dvaCount > 0 && (

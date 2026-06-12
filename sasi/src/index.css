@@ -46,6 +46,101 @@ body.theme-light {
   --app-accent-hover: 185 28 28;
 }
 
+/* ============================================================================
+   Sidebar / command-rail chrome (Plantão Board layout)
+   Navy rail in every theme; the active-item accent tracks --app-accent so it
+   shifts red↔blue with dark↔clinical, same split as the design tokens.
+   ============================================================================ */
+:root {
+  --sidebar-width: 232px;
+}
+
+:root, body.theme-clinical, body.theme-light {
+  --chrome-bg:         linear-gradient(170deg, #13294a 0%, #0b1d35 100%);
+  --chrome-text:       #e6edf6;
+  --chrome-muted:      #8aa1bd;
+  --chrome-border:     rgba(255, 255, 255, .08);
+}
+
+body.theme-dark {
+  --chrome-bg:         linear-gradient(170deg, #0c1a30 0%, #060e1c 100%);
+  --chrome-text:       #e2e8f0;
+  --chrome-muted:      #7d93b0;
+  --chrome-border:     rgba(255, 255, 255, .06);
+}
+
+.sasi-rail {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: var(--chrome-bg);
+  color: var(--chrome-text);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 12px;
+}
+.sasi-rail__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--chrome-border);
+}
+.sasi-rail__mark {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--app-accent));
+  box-shadow: 0 4px 14px rgb(var(--app-accent) / .4);
+}
+.sasi-rail__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 11px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--chrome-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+.sasi-rail__item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .06);
+  color: var(--chrome-text);
+}
+.sasi-rail__item.on {
+  background: rgb(var(--app-accent) / .22);
+  color: #fff;
+  border-left: 3px solid rgb(var(--app-accent));
+  padding-left: 8px;
+}
+.sasi-rail__item:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.sasi-rail__badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: rgb(var(--app-accent));
+  color: #fff;
+}
+
 html, body, #root { height: 100%; }
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -145,12 +240,12 @@ body.theme-clinical .sys-renal .sys-title,   body.theme-light .sys-renal .sys-ti
 body.theme-clinical .sys-hemato .sys-title,  body.theme-light .sys-hemato .sys-title  { color:#be185d; }
 body.theme-clinical .sys-infecto .sys-title, body.theme-light .sys-infecto .sys-title { color:#0f766e; }
 
-/* Card gravity left-border accent (Gemini-style, 8px thick) */
-.card-grav-estavel  { border-left: 8px solid #10b981; background: rgba(16,185,129,.06); }
-.card-grav-moderado { border-left: 8px solid #f59e0b; background: rgba(245,158,11,.06); }
-.card-grav-grave    { border-left: 8px solid #f97316; background: rgba(249,115,22,.06); }
-.card-grav-critico  { border-left: 8px solid #dc2626; background: rgba(220,38,38,.08); }
-.card-grav-obito    { border-left: 8px solid #475569; background: rgba(71,85,105,.06); }
+/* Card gravity left-border accent */
+.card-grav-estavel  { border-left: 6px solid #10b981; background: rgba(16,185,129,.06); }
+.card-grav-moderado { border-left: 6px solid #f59e0b; background: rgba(245,158,11,.06); }
+.card-grav-grave    { border-left: 6px solid #f97316; background: rgba(249,115,22,.06); }
+.card-grav-critico  { border-left: 6px solid #dc2626; background: rgba(220,38,38,.08); }
+.card-grav-obito    { border-left: 6px solid #475569; background: rgba(71,85,105,.06); }
 
 body.theme-clinical .card-grav-estavel,
 body.theme-light    .card-grav-estavel  { background: rgba(16,185,129,.08); }
