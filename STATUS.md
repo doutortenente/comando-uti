@@ -99,9 +99,14 @@ Documento completo no Google Drive: **"Plano de ação login e autenticação SA
 - Contêm apenas o schema antigo de 4 tabelas (`patients`, `clinical_parameters`, `prescriptions`, `lab_results`) — **obsoleto**.
 - Existe migration `03_dev_bypass_rls.sql` (usada no bypass de maio).
 
-**Dívida:** As migrations do schema atual não estão versionadas no repositório. Risco de drift.
+**Schema agora versionado (2026-06-14):** o schema real de 9 tabelas + 5 views + funções +
+RLS foi capturado em `supabase/migrations/05_schema_real_snapshot.sql` (snapshot autoritativo)
+e os tipos canônicos em `supabase/types/database.types.ts`. As migrations `01`–`04` são
+históricas/obsoletas — ver `supabase/migrations/README.md`. Dívida de drift resolvida.
 
-**Tipos TypeScript oficiais:** `src/lib/supabaseClient.ts` (da pasta ativa) — fonte da verdade para o frontend.
+**Tipos TypeScript oficiais:** `supabase/types/database.types.ts` (gerados do schema real,
+compartilhados entre `sasi` web e `uti-tracker` mobile). `sasi/src/lib/supabaseClient.ts`
+permanece como o espelho usado pelo frontend web.
 
 ---
 
