@@ -15,6 +15,7 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 # JetBrains: o /.idea da raiz É versionado (arquivos por-usuário em .idea/.gitignore).
 # .idea de subpastas continua ignorado — abra sempre a raiz do repo no IDE.
 **/.idea/
@@ -119,6 +120,10 @@ claude-code-*.json
 teste-*.md
 scratch.*
 tmp/
+.sasi-session-backup/
+
+# Pasta .idea duplicada (canônica é /.idea na raiz)
+CONFIGURAÇÕES_CLAUDE_JB.idea/
 
 # Artifacts pesados
 *.vsix

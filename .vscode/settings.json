@@ -1,0 +1,13 @@
+{
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.sasi-session-backup": true
+  },
+  "files.exclude": {
+    "**/node_modules": true
+  },
+  "files.associations": {
+    "*.mdc": "markdown"
+  }
+}
