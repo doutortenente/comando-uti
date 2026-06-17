@@ -13,9 +13,8 @@ dist-ssr
 *.local
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
+# Config de editor (.vscode/.cursor) vive no repo onde é usada, não no GERAL.
+.vscode/
 # JetBrains: o /.idea da raiz É versionado (arquivos por-usuário em .idea/.gitignore).
 # .idea de subpastas continua ignorado — abra sempre a raiz do repo no IDE.
 **/.idea/
