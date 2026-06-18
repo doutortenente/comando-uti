@@ -129,3 +129,7 @@ tmp/
 claude-code-mcp-obsidian.json
 teste-mcp.md
 # === FIM BLINDAGEM =================================================
+
+# Python bytecode caches (regenerados por hooks)
+__pycache__/
+*.py[cod]
