@@ -13,7 +13,7 @@ Espelho local dos modelos **Padrão** do vault Obsidian **CELEBRO** (perfil Note
 O vault Obsidian continua sendo a fonte canônica para notas e doutrina clínica:
 
 ```
-/home/dr/Obsidian /CELEBRO/
+/home/dr/vaults/celebro/
 ```
 
 Estes arquivos são **cópias de referência** para o IDE e para skills de IA no repo.
@@ -29,11 +29,11 @@ Ao alterar doutrina clínica, edite no Obsidian e sincronize (`notas`), depois r
 
 ```bash
 # Doutrina clínica
-cp -r "/home/dr/Obsidian /CELEBRO/30-Projetos/SASI/Doutrina/00 - Doutrina (SKILLs e Templates)/"* templates/sasi-clinico/
+cp -r "/home/dr/vaults/celebro/30-Projetos/SASI/Doutrina/00 - Doutrina (SKILLs e Templates)/"* templates/sasi-clinico/
 
 # Arquitetura
-cp "/home/dr/Obsidian /CELEBRO/ARQUITETURA REPOSITÓRIOS/SASI_v2_Compiladao_Arquitetura_Projetos_2026.md" templates/arquitetura/sasi-v2-monorepo.md
+cp "/home/dr/vaults/celebro/ARQUITETURA REPOSITÓRIOS/SASI_v2_Compiladao_Arquitetura_Projetos_2026.md" templates/arquitetura/sasi-v2-monorepo.md
 
 # Diário
-cp "/home/dr/Obsidian /CELEBRO/99-Templates/daily.md" templates/obsidian/daily.md
+cp "/home/dr/vaults/celebro/99-Templates/daily.md" templates/obsidian/daily.md
 ```
