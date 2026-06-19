@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="mcp-server: build" type="js.build_tools.npm" folderName="mcp-server">
-    <package-json value="$PROJECT_DIR$/sasi-mcp-server/package.json" />
+    <package-json value="$PROJECT_DIR$/../sasi/mcp-server/package.json" />
     <command value="run" />
     <scripts>
       <script value="build" />
