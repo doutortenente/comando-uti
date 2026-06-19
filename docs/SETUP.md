@@ -37,16 +37,16 @@ git config --global user.email "seu@email.com"
 node -v        # >= 18
 git --version
 
-# Clonar e instalar (3 package.json independentes)
+# Clonar e instalar (2 package.json — frontend + MCP)
 git clone https://github.com/doutortenente/comando-uti.git
-cd comando-uti && npm install
+cd comando-uti
 cd sasi && npm install
 cd ../sasi-mcp-server && npm install
 ```
 
 ## Variáveis de ambiente
 
-Criar um `.env` na raiz do repo:
+Criar um `.env` em `sasi/` (frontend):
 
 ```
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -60,9 +60,8 @@ Settings > API).
 ## Conferindo que está tudo funcionando
 
 ```bash
-cd sasi && npm run dev    # frontend ativo em http://localhost:5173
-npm run typecheck         # TypeScript sem erros
-cd .. && npm run lint     # ESLint da raiz
+cd sasi && npm run dev       # frontend ativo em http://localhost:5173
+cd sasi && npm run typecheck # TypeScript sem erros
 ```
 
 Ou, no WebStorm, use as run configurations prontas no dropdown

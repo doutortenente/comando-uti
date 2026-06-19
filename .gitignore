@@ -13,8 +13,8 @@ dist-ssr
 *.local
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# Config de editor (.vscode/.cursor) vive no repo onde é usada, não no GERAL.
+.vscode/
 # JetBrains: o /.idea da raiz É versionado (arquivos por-usuário em .idea/.gitignore).
 # .idea de subpastas continua ignorado — abra sempre a raiz do repo no IDE.
 **/.idea/
@@ -72,13 +72,14 @@ genkitggoggins/
 dataconnect/
 
 # Código antigo monolítico (raiz) — só na raiz, não afetar sasi/
- /src/
+/src/
 /public/
 postcss.config.js
 tailwind.config.js
 vite.config.js
 /index.html
 install.cmd
+skills-lock.json
 
 # Protótipos e extrações Gemini (design histórico apenas)
 gemini_code_extracted.tsx
@@ -118,6 +119,10 @@ claude-code-*.json
 teste-*.md
 scratch.*
 tmp/
+.sasi-session-backup/
+
+# Pasta .idea duplicada (canônica é /.idea na raiz)
+CONFIGURAÇÕES_CLAUDE_JB.idea/
 
 # Artifacts pesados
 *.vsix

@@ -1,16 +1,43 @@
-# React + Vite
+# comando-uti — GERAL
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Projeto-índice (umbrella) do ambiente do Dr. Nicolas Nagaita ("Tenente").
+Aqui vivem a **doutrina de arquitetura**, **templates**, **docs operacionais** e a
+**config de ferramentas de IA** — não o código de produto, que mora nos repos irmãos.
 
-Currently, two official plugins are available:
+## Os 5 repositórios
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Projeto | Repo | Papel |
+|---------|------|-------|
+| 🟢 **SASI** | [`doutortenente/SASI`](https://github.com/doutortenente/SASI) | Produto clínico — UTI (React+Vite frontend, MCP server, Supabase, doutrina Ramo C). Deploy Netlify. |
+| 🤖 **Claude** | [`doutortenente/Claude`](https://github.com/doutortenente/Claude) | Config + skills reutilizáveis do Claude Code. |
+| 🛠️ **GROK** | [`doutortenente/GROK`](https://github.com/doutortenente/GROK) | Tooling em torno do Grok Build/Composer (scaffold). |
+| 🏠 **JARVIS** | [`doutortenente/JARVIS`](https://github.com/doutortenente/JARVIS) | Homelab / VPS — Docker+Traefik (scaffold). |
+| 📚 **GERAL** | `doutortenente/comando-uti` (este) | Doutrina, templates, docs, config de IA. |
 
-## React Compiler
+> Local no disco: todos irmãos em `~/WebstormProjects/`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## O que tem aqui (GERAL)
 
-## Expanding the ESLint configuration
+```text
+comando-uti/
+├── arquitetura-padrao.md   Estrutura-padrão de pastas para projetos novos
+├── templates/
+│   ├── arquitetura/        Scaffolds (Node-TS, FastAPI, React+Vite, SASI v2)
+│   └── obsidian/           daily.md (nota de plantão)
+├── docs/                   MAPA-REPOSITORIO · DIRETORIOS_DETALHADO · JETBRAINS · SETUP
+├── .claude/                Config Claude Code (settings + skills vendor)
+├── .cursor/                Config Cursor
+├── .github/ .idea/ .vscode/  CI + IDE
+└── .gitignore .gitattributes
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Histórico
+
+Este repo já foi o monorepo único do SASI. Em 17-Jun-2026 foi feito o **split em 5
+repos irmãos** (branch `chore/split-into-sibling-repos`): o produto clínico migrou
+para o repo `SASI`, config do Claude para `Claude`, e `comando-uti` virou o índice
+GERAL. Todo o histórico anterior permanece neste repo.
+
+> ⚠️ **Deploy:** o Netlify (`sasi-uti`) ainda aponta para `comando-uti/sasi` na **main**.
+> A `main` deste repo **não foi alterada** pelo split. Antes de mergear este split na
+> main, reaponte o Netlify para `doutortenente/SASI` (base `frontend/`), senão o deploy quebra.

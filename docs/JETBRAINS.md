@@ -23,10 +23,9 @@ Download: <https://www.jetbrains.com/webstorm/> (trial de 30 dias).
 1. `File > Open` e selecione a **raiz do repositório** (`comando-uti/`),
    nunca `sasi/` direto — as run configurations dependem disso.
 2. O IDE lê `.idea/` automaticamente. Aceite o prompt de "Trust Project".
-3. Instale as dependências (3 `package.json` independentes):
+3. Instale as dependências (2 `package.json` — `sasi/` e `sasi-mcp-server/`):
 
    ```bash
-   npm install              # raiz (ESLint)
    cd sasi && npm install
    cd ../sasi-mcp-server && npm install
    ```
@@ -40,18 +39,16 @@ Ficam no dropdown do canto superior direito, agrupadas em pastas:
 
 - **sasi**: `dev` (Vite), `build` (tsc + vite build), `typecheck`, `preview`
 - **mcp-server**: `dev` (tsx watch), `build` (tsc)
-- **raiz**: `lint` (ESLint 9 flat config)
+
+Templates de arquitetura e doutrina clínica: pasta `templates/` (espelho do Obsidian CELEBRO).
+Mapa completo: [MAPA-REPOSITORIO.md](MAPA-REPOSITORIO.md).
 
 Equivalem a `npm run <script>` em cada pasta.
 
 ## ESLint
 
-Habilitado em modo automático (`.idea/jsLinters/eslint.xml`), usando o
-`eslint.config.js` da raiz. Atenção: o flat config atual só define regras
-para `*.js`/`*.jsx` — arquivos `.ts`/`.tsx` do `sasi/` ainda não têm regras
-(mesmo comportamento de `npm run lint` na linha de comando). O padrão de
-arquivos no IDE já inclui TS para quando o flat config ganhar
-`typescript-eslint`.
+Não há `package.json` nem ESLint na raiz (removidos na faxina 11/06/2026).
+Typecheck do frontend: run config `sasi: typecheck` ou `cd sasi && npm run typecheck`.
 
 ## Tailwind
 
