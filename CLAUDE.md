@@ -8,7 +8,7 @@ Após o split de 17-Jun-2026, `comando-uti` é o projeto **GERAL**: doutrina de
 arquitetura, templates de scaffolding, docs operacionais e config de IA. O código
 clínico (SASI) vive em repo próprio.
 
-## Mapa dos 5 repos irmãos (`~/WebstormProjects/`)
+## Mapa dos 6 repos irmãos (`~/dev/`)
 
 - **SASI** (`doutortenente/SASI`) — produto clínico de UTI. Toda doutrina clínica
   (zero alucinação, Ramo C, Max–Min, conduta 1:1), o `CLAUDE.md` clínico, skills e
@@ -16,6 +16,7 @@ clínico (SASI) vive em repo próprio.
 - **Claude** (`doutortenente/Claude`) — config + skills do Claude Code.
 - **GROK** (`doutortenente/GROK`) — tooling Grok (scaffold).
 - **JARVIS** (`doutortenente/JARVIS`) — homelab/VPS (scaffold).
+- **Cursor** (`doutortenente/Cursor`) — config do Cursor (scaffold).
 - **comando-uti** (este) — GERAL.
 
 ## O que mora aqui
